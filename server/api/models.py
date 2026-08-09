@@ -201,6 +201,14 @@ class DeliveryCoachingRecord(Base):
     consented_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Camera consent is tracked apart from speaking-delivery consent. Agreeing
+    # to have pace and pauses measured is not agreeing to switch a camera on,
+    # and either can be withdrawn without the other.
+    video_consented: Mapped[bool] = mapped_column(Boolean, default=False)
+    video_consent_version: Mapped[str | None] = mapped_column(String(80))
+    video_consented_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Aggregate signals only. Frames are never uploaded or stored.
+    video_summary: Mapped[dict[str, object] | None] = mapped_column(JSON)
     speech_observations: Mapped[list[dict[str, object]]] = mapped_column(JSON)
     metrics: Mapped[list[dict[str, object]]] = mapped_column(JSON)
     baseline: Mapped[dict[str, object] | None] = mapped_column(JSON)

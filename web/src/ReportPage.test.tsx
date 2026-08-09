@@ -102,6 +102,17 @@ const report: InterviewReport = {
       },
     ],
     suggestions: ["Pause between the problem, options, and trade-off."],
+    video_consented: true,
+    video_consent_version: "video-delivery-v1",
+    video_summary: {
+      sample_count: 900,
+      duration_ms: 180_000,
+      face_present_ratio: 0.82,
+      facing_camera_ratio: 0.64,
+      steadiness_score: 0.71,
+      off_frame_episodes: 1,
+      longest_off_frame_ms: 4200,
+    },
   },
   completed_at: "2026-08-07T10:32:00Z",
 };

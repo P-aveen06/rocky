@@ -2815,3 +2815,28 @@ h3 {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Local camera preview for on-camera coaching. The stream is rendered here and
+   nowhere else: it is never uploaded and never added to the peer connection. */
+.self-view {
+  width: 100%;
+  max-width: calc(var(--space-9) * 2);
+  margin-top: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  /* Mirrored, so moving left on screen matches moving left in the room. */
+  transform: scaleX(-1);
+}
+
+.self-view--hidden {
+  display: none;
+}
+
+.self-view__note {
+  margin-top: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}

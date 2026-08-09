@@ -6,7 +6,10 @@
  * frame is uploaded: only the aggregate in `VideoDeliverySummary` is sent.
  */
 
-import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+// Type-only, so it is erased at compile time. The library itself is pulled in
+// by dynamic import below, which keeps ~140kB of face tracking out of the main
+// bundle for the majority of interviews that never switch the camera on.
+import type { FaceLandmarker } from "@mediapipe/tasks-vision";
 
 import {
   headPoseFromMatrix,
@@ -77,6 +80,8 @@ export async function requestCameraStream(): Promise<MediaStream> {
 
 async function createLandmarker(): Promise<FaceLandmarker> {
   try {
+    const { FaceLandmarker, FilesetResolver } =
+      await import("@mediapipe/tasks-vision");
     const fileset = await FilesetResolver.forVisionTasks(WASM_DIRECTORY);
     return await FaceLandmarker.createFromOptions(fileset, {
       baseOptions: { modelAssetPath: MODEL_PATH, delegate: "GPU" },

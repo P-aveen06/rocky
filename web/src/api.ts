@@ -22,6 +22,7 @@ import type {
   SpeechSegmentInput,
   User,
   UsageSummary,
+  VideoSummaryPayload,
 } from "./types";
 import type { RecordedUtterance } from "./voiceCapture";
 
@@ -216,6 +217,19 @@ export const api = {
         }),
       },
     ),
+  updateVideoConsent: (interviewId: string, enabled: boolean) =>
+    request<DeliveryConsent>(`/api/interviews/${interviewId}/video-consent`, {
+      method: "POST",
+      body: JSON.stringify({
+        enabled,
+        consent_version: "video-delivery-v1",
+      }),
+    }),
+  saveVideoSummary: (interviewId: string, summary: VideoSummaryPayload) =>
+    request<DeliveryCoaching>(`/api/interviews/${interviewId}/video-summary`, {
+      method: "POST",
+      body: JSON.stringify(summary),
+    }),
   deliveryCoaching: (interviewId: string) =>
     request<DeliveryCoaching>(
       `/api/interviews/${interviewId}/delivery-coaching`,

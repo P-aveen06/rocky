@@ -21,6 +21,12 @@ import {
   type RealtimeEvent,
 } from "./realtime";
 import {
+  isVideoCaptureSupported,
+  requestCameraStream,
+  VideoCaptureError,
+  VideoDeliveryRecorder,
+} from "./videoCapture";
+import {
   COORDINATOR_FATAL_MESSAGE,
   TranscriptionCoordinatorError,
   TurnTranscriptionCoordinator,
@@ -128,6 +134,11 @@ export function PracticePage({
   const [microphoneLabel, setMicrophoneLabel] = useState("");
   const [microphoneConsent, setMicrophoneConsent] = useState(false);
   const [deliveryConsent, setDeliveryConsent] = useState(false);
+  const [videoConsent, setVideoConsent] = useState(false);
+  const [videoActive, setVideoActive] = useState(false);
+  const [videoSupported] = useState(isVideoCaptureSupported);
+  const selfViewRef = useRef<HTMLVideoElement | null>(null);
+  const videoRecorderRef = useRef<VideoDeliveryRecorder | null>(null);
   const [runtime, setRuntime] = useState<InterviewRuntime | null>(null);
   const [connection, setConnection] = useState<ConnectionStatus>("idle");
   const [responseActive, setResponseActive] = useState(false);
@@ -473,6 +484,9 @@ export function PracticePage({
     coordinatorRef.current = null;
     for (const track of mediaRef.current?.getTracks() ?? []) track.stop();
     mediaRef.current = null;
+    // Stop the camera too, so navigating away always turns the light off.
+    videoRecorderRef.current?.stop();
+    videoRecorderRef.current = null;
   }
 
   function handleRealtimeEvent(event: RealtimeEvent) {
@@ -596,6 +610,60 @@ export function PracticePage({
     }
   }
 
+  /**
+   * Bring up the camera and on-device tracking, if it was consented to.
+   *
+   * Never fatal: if the camera is refused or the model fails to load the
+   * interview proceeds without on-camera coaching rather than stopping.
+   */
+  async function startVideoCoaching() {
+    const wanted = inputMode === "voice" && videoConsent && videoSupported;
+    if (!wanted || videoRecorderRef.current) return;
+    try {
+      await api.updateVideoConsent(interview.id, true);
+      const stream = await requestCameraStream();
+      const element = selfViewRef.current;
+      if (!element) {
+        for (const track of stream.getTracks()) track.stop();
+        return;
+      }
+      const recorder = await VideoDeliveryRecorder.create(element, stream);
+      recorder.start();
+      videoRecorderRef.current = recorder;
+      setVideoActive(true);
+    } catch (caught) {
+      setVideoActive(false);
+      setError(
+        caught instanceof VideoCaptureError
+          ? caught.message
+          : "On-camera coaching could not start. The interview will continue without it.",
+      );
+    }
+  }
+
+  /** Releases the camera and stores the aggregate. Never blocks stopping. */
+  async function finishVideoCoaching() {
+    const recorder = videoRecorderRef.current;
+    videoRecorderRef.current = null;
+    setVideoActive(false);
+    if (!recorder) return;
+    const summary = recorder.stop();
+    if (summary.sampleCount === 0) return;
+    try {
+      await api.saveVideoSummary(interview.id, {
+        sample_count: summary.sampleCount,
+        duration_ms: summary.durationMs,
+        face_present_ratio: summary.facePresentRatio,
+        facing_camera_ratio: summary.facingCameraRatio,
+        steadiness_score: summary.steadinessScore,
+        off_frame_episodes: summary.offFrameEpisodes,
+        longest_off_frame_ms: summary.longestOffFrameMs,
+      });
+    } catch {
+      // Coaching is a bonus; losing it must not fail the interview.
+    }
+  }
+
   async function connect() {
     if (!capabilities || !audioRef.current || interviewEnded) return;
     setError(null);
@@ -607,6 +675,7 @@ export function PracticePage({
         interview.id,
         inputMode === "voice" && deliveryConsent,
       );
+      await startVideoCoaching();
       mediaRef.current = await prepareInputMedia(inputMode, mediaRef.current);
       if (inputMode === "voice") {
         if (!mediaRef.current) {
@@ -750,6 +819,9 @@ export function PracticePage({
     stoppedRef.current = true;
     transportRef.current?.setMicrophoneEnabled(false);
     setFinalizing(true);
+    // Release the camera before the finalizing wait, so the light goes out the
+    // moment the candidate presses stop rather than a few seconds later.
+    await finishVideoCoaching();
     await recorderRef.current?.finish();
     transportRef.current?.close(false);
     const coordinator = coordinatorRef.current;
@@ -984,6 +1056,28 @@ export function PracticePage({
                       </small>
                     </span>
                   </label>
+                  {videoSupported ? (
+                    <label className="consent-option">
+                      <input
+                        type="checkbox"
+                        checked={videoConsent}
+                        onChange={(event) =>
+                          setVideoConsent(event.target.checked)
+                        }
+                      />
+                      <span>
+                        <strong>Add on-camera coaching</strong>
+                        <small>
+                          Your camera turns on and face tracking runs entirely
+                          in this browser. No video is recorded, uploaded, or
+                          stored — only whether you stayed in frame, faced the
+                          camera, and held steady. Nothing about your expression
+                          or mood is judged, and none of it changes your
+                          role-fit score.
+                        </small>
+                      </span>
+                    </label>
+                  ) : null}
                 </div>
               ) : (
                 <p className="delivery-unavailable-note">
@@ -1192,6 +1286,19 @@ export function PracticePage({
                     Speak naturally. Server voice activity detection sends the
                     answer when you pause.
                   </p>
+                  <video
+                    ref={selfViewRef}
+                    className={`self-view ${videoActive ? "" : "self-view--hidden"}`}
+                    playsInline
+                    muted
+                    aria-label="Your camera preview"
+                  />
+                  {videoActive ? (
+                    <p className="self-view__note">
+                      Camera on. Tracking runs on this device and nothing is
+                      recorded.
+                    </p>
+                  ) : null}
                 </div>
               )}
             </aside>

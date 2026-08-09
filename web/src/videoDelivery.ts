@@ -175,6 +175,27 @@ export function summarizeVideoSamples(
   };
 }
 
+/** The API stores these snake-cased; the report reads them back through here. */
+export function fromVideoSummaryPayload(payload: {
+  sample_count: number;
+  duration_ms: number;
+  face_present_ratio: number;
+  facing_camera_ratio: number;
+  steadiness_score: number;
+  off_frame_episodes: number;
+  longest_off_frame_ms: number;
+}): VideoDeliverySummary {
+  return {
+    sampleCount: payload.sample_count,
+    durationMs: payload.duration_ms,
+    facePresentRatio: payload.face_present_ratio,
+    facingCameraRatio: payload.facing_camera_ratio,
+    steadinessScore: payload.steadiness_score,
+    offFrameEpisodes: payload.off_frame_episodes,
+    longestOffFrameMs: payload.longest_off_frame_ms,
+  };
+}
+
 /**
  * Turn a summary into the plain observations a candidate can act on.
  *

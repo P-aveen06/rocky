@@ -2599,6 +2599,88 @@ def test_m4_completion_generates_one_evidence_backed_report(
     )
 
 
+def test_video_coaching_requires_its_own_consent_and_stores_only_aggregates(
+    tmp_path: Path,
+) -> None:
+    """Camera consent is separate from speaking-delivery consent.
+
+    Agreeing to have pace and pauses measured is not agreeing to switch a
+    camera on, so consenting to one must not enable the other, and withdrawing
+    camera consent must discard what the camera produced.
+    """
+
+    video_settings = Settings(
+        _env_file=None,
+        app_env="test",
+        auth_mode="local",
+        database_url=f"sqlite+aiosqlite:///{tmp_path / 'video.db'}",
+        auto_create_schema=True,
+        web_dist_dir=tmp_path / "missing-dist",
+        azure_openai_endpoint="https://example.services.ai.azure.com",
+        azure_openai_api_key="permanent-server-key",
+        azure_openai_realtime_deployment="realtime-deployment",
+    )
+    summary = {
+        "sample_count": 900,
+        "duration_ms": 180_000,
+        "face_present_ratio": 0.94,
+        "facing_camera_ratio": 0.81,
+        "steadiness_score": 0.62,
+        "off_frame_episodes": 1,
+        "longest_off_frame_ms": 4200,
+    }
+
+    with TestClient(create_app(video_settings)) as video_client:
+        interview = _ready_session(video_client)
+        base = f"/api/interviews/{interview['id']}"
+
+        # Consenting to speaking delivery must not switch the camera on.
+        audio_consent = video_client.post(
+            f"{base}/delivery-consent",
+            json={"enabled": True, "consent_version": "delivery-v1"},
+        )
+        assert audio_consent.status_code == 200
+        assert audio_consent.json()["video_consented"] is False
+
+        # And a summary is refused until the camera is consented to separately.
+        assert (
+            video_client.post(f"{base}/video-summary", json=summary).status_code == 409
+        )
+
+        consent = video_client.post(
+            f"{base}/video-consent",
+            json={"enabled": True, "consent_version": "video-delivery-v1"},
+        )
+        assert consent.status_code == 200
+        assert consent.json()["video_consented"] is True
+
+        stored = video_client.post(f"{base}/video-summary", json=summary)
+        assert stored.status_code == 200
+        assert stored.json()["video_summary"] == summary
+
+        # Implausible aggregates are rejected rather than shown back.
+        assert (
+            video_client.post(
+                f"{base}/video-summary", json={**summary, "face_present_ratio": 1.7}
+            ).status_code
+            == 422
+        )
+
+        withdrawn = video_client.post(
+            f"{base}/video-consent",
+            json={"enabled": False, "consent_version": "video-delivery-v1"},
+        )
+        assert withdrawn.status_code == 200
+        assert withdrawn.json()["video_consented"] is False
+        assert withdrawn.json()["video_summary"] is None
+
+    # Withdrawal really removes it, rather than hiding it behind a flag.
+    with sqlite3.connect(tmp_path / "video.db") as connection:
+        assert connection.execute(
+            "select video_summary from delivery_coaching"
+        ).fetchone()[0] in (None, "null")
+
+
 def test_m5_delivery_consent_metrics_disable_and_delete(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

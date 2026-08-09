@@ -57,6 +57,21 @@ export interface DeliveryConsent {
   metrics: DeliveryMetric[];
   observations: DeliveryObservation[];
   suggestions: string[];
+  video_consented: boolean;
+  video_consent_version: string | null;
+  /** Aggregates only. No frame is ever uploaded. */
+  video_summary: VideoSummaryPayload | null;
+}
+
+/** Snake-cased to match the API; the browser computes these values. */
+export interface VideoSummaryPayload {
+  sample_count: number;
+  duration_ms: number;
+  face_present_ratio: number;
+  facing_camera_ratio: number;
+  steadiness_score: number;
+  off_frame_episodes: number;
+  longest_off_frame_ms: number;
 }
 
 export interface DeliveryBaseline {

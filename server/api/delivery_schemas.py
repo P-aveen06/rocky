@@ -15,6 +15,29 @@ class DeliveryConsentRequest(BaseModel):
     consent_version: Literal["delivery-v1"]
 
 
+class VideoConsentRequest(BaseModel):
+    """Separate from speaking-delivery consent, and separately revocable."""
+
+    enabled: bool
+    consent_version: Literal["video-delivery-v1"]
+
+
+class VideoDeliverySummaryRequest(BaseModel):
+    """Aggregates computed in the browser. No frame is ever uploaded.
+
+    Bounded on every field so a tampered client cannot store arbitrary values,
+    and so the numbers rendered back to the candidate are always sensible.
+    """
+
+    sample_count: int = Field(ge=0, le=200_000)
+    duration_ms: int = Field(ge=0, le=24 * 60 * 60 * 1000)
+    face_present_ratio: float = Field(ge=0, le=1)
+    facing_camera_ratio: float = Field(ge=0, le=1)
+    steadiness_score: float = Field(ge=0, le=1)
+    off_frame_episodes: int = Field(ge=0, le=10_000)
+    longest_off_frame_ms: int = Field(ge=0, le=24 * 60 * 60 * 1000)
+
+
 class SpeechSegment(BaseModel):
     started_at: datetime
     ended_at: datetime
@@ -47,3 +70,8 @@ class DeliveryCoachingResponse(BaseModel):
     metrics: list[DeliveryTurnMetric]
     observations: list[DeliveryObservation]
     suggestions: list[str]
+    video_consented: bool = False
+    video_consent_version: str | None = None
+    # Numbers only. The client turns these into wording, so the phrasing lives
+    # in one place rather than being duplicated on both sides.
+    video_summary: VideoDeliverySummaryRequest | None = None

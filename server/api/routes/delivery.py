@@ -25,6 +25,8 @@ from ..delivery_schemas import (
     DeliveryCoachingResponse,
     DeliveryConsentRequest,
     DeliveryObservationBatchRequest,
+    VideoConsentRequest,
+    VideoDeliverySummaryRequest,
 )
 from ..models import DeliveryCoachingRecord, InterviewSession, InterviewTurn, User
 
@@ -65,6 +67,56 @@ async def _record(
         )
         database.add(record)
     return record
+
+
+@router.post("/{interview_id}/video-consent", response_model=DeliveryCoachingResponse)
+async def update_video_consent(
+    interview_id: str,
+    payload: VideoConsentRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    database: Annotated[AsyncSession, Depends(get_database_session)],
+) -> DeliveryCoachingResponse:
+    """Opt in or out of on-camera coaching, independently of audio delivery."""
+
+    interview = await _owned_interview(database, user, interview_id)
+    if payload.enabled and interview.input_mode == "text_dev":
+        raise HTTPException(
+            status_code=409,
+            detail="On-camera coaching is unavailable in developer text mode.",
+        )
+    record = await _record(database, interview.id, create=True)
+    assert record is not None
+    record.video_consented = payload.enabled
+    record.video_consent_version = payload.consent_version
+    if payload.enabled:
+        record.video_consented_at = datetime.now(UTC)
+        record.deleted_at = None
+    else:
+        # Withdrawing consent discards what was already observed.
+        record.video_summary = None
+    await database.commit()
+    return delivery_coaching_response(interview, record)
+
+
+@router.post("/{interview_id}/video-summary", response_model=DeliveryCoachingResponse)
+async def save_video_summary(
+    interview_id: str,
+    payload: VideoDeliverySummaryRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    database: Annotated[AsyncSession, Depends(get_database_session)],
+) -> DeliveryCoachingResponse:
+    """Store the aggregate the browser computed. Frames never reach the server."""
+
+    interview = await _owned_interview(database, user, interview_id)
+    record = await _record(database, interview.id, create=False)
+    if record is None or not record.video_consented:
+        raise HTTPException(
+            status_code=409,
+            detail="On-camera coaching was not consented to for this interview.",
+        )
+    record.video_summary = payload.model_dump()
+    await database.commit()
+    return delivery_coaching_response(interview, record)
 
 
 @router.post(
@@ -188,6 +240,10 @@ async def delete_delivery_metrics(
     record.baseline = None
     record.observations = []
     record.suggestions = []
+    # Delete the on-camera data too. Hiding it behind deleted_at would leave it
+    # sitting in the row, which is not what "delete" promises.
+    record.video_consented = False
+    record.video_summary = None
     await database.commit()
     return delivery_coaching_response(interview, record)
 
@@ -233,6 +289,13 @@ def delivery_coaching_response(
             for item in (record.observations if record else [])
         ],
         suggestions=list(record.suggestions if record else []),
+        video_consented=bool(record and record.video_consented),
+        video_consent_version=record.video_consent_version if record else None,
+        video_summary=(
+            VideoDeliverySummaryRequest.model_validate(record.video_summary)
+            if record and record.video_summary and record.deleted_at is None
+            else None
+        ),
     )
 
 

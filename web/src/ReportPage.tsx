@@ -7,6 +7,10 @@ import type {
   InterviewReport,
   InterviewSession,
 } from "./types";
+import {
+  fromVideoSummaryPayload,
+  videoDeliveryObservations,
+} from "./videoDelivery";
 
 interface ReportPageProps {
   interview: InterviewSession;
@@ -654,6 +658,25 @@ export function ReportPage({
                   </ul>
                 </div>
               </div>
+              {report.delivery_coaching.video_summary ? (
+                <div className="delivery-report__video">
+                  <h3>On camera</h3>
+                  <ul>
+                    {videoDeliveryObservations(
+                      fromVideoSummaryPayload(
+                        report.delivery_coaching.video_summary,
+                      ),
+                    ).map((observation) => (
+                      <li key={observation}>{observation}</li>
+                    ))}
+                  </ul>
+                  <p className="delivery-note">
+                    Measured on your device from your camera. No video was
+                    recorded or uploaded, and none of this changes your role-fit
+                    score.
+                  </p>
+                </div>
+              ) : null}
             </>
           ) : (
             <p className="delivery-status-copy" role="status">
