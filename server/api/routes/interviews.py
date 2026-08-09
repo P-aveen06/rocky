@@ -16,6 +16,7 @@ from ..schemas import (
     CreateInterviewRequest,
     InterviewListResponse,
     InterviewResponse,
+    UpdateInterviewRequest,
 )
 from ..services.privacy import delete_interview_data, privacy_hash
 
@@ -110,6 +111,27 @@ async def delete_interview(
     )
     await database.commit()
     return Response(status_code=204)
+
+
+@router.patch("/{interview_id}", response_model=InterviewResponse)
+async def update_interview(
+    interview_id: str,
+    payload: UpdateInterviewRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    database: Annotated[AsyncSession, Depends(get_database_session)],
+) -> InterviewSession:
+    interview = await database.scalar(
+        select(InterviewSession).where(
+            InterviewSession.id == interview_id,
+            InterviewSession.user_id == user.id,
+        )
+    )
+    if interview is None:
+        raise HTTPException(status_code=404, detail="Practice session was not found.")
+    interview.title = payload.title
+    await database.commit()
+    await database.refresh(interview)
+    return interview
 
 
 @router.get("/{interview_id}", response_model=InterviewResponse)

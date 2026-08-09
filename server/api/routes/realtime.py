@@ -311,9 +311,13 @@ async def realtime_client_secret(
     interview = await _owned_interview(database, user, interview_id, for_update=True)
     await _finalize_if_expired(interview, database)
     if payload.duration_minutes not in SUPPORTED_DURATIONS:
+        supported = ", ".join(str(value) for value in SUPPORTED_DURATIONS[:-1])
         raise HTTPException(
             status_code=422,
-            detail="Interview duration must be 15, 30, 45, or 60 minutes.",
+            detail=(
+                f"Interview duration must be {supported}, or "
+                f"{SUPPORTED_DURATIONS[-1]} minutes."
+            ),
         )
     if payload.input_mode == "text_dev" and not settings.enable_text_dev_mode:
         raise HTTPException(

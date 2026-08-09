@@ -294,6 +294,21 @@ def _docx_bytes() -> bytes:
     return output.getvalue()
 
 
+def test_practice_session_title_can_be_renamed(client: TestClient) -> None:
+    interview = _create_session(client)
+
+    renamed = client.patch(
+        f"/api/interviews/{interview['id']}",
+        json={"title": "  Platform leadership rehearsal  "},
+    )
+
+    assert renamed.status_code == 200
+    assert renamed.json()["title"] == "Platform leadership rehearsal"
+    assert client.get(f"/api/interviews/{interview['id']}").json()["title"] == (
+        "Platform leadership rehearsal"
+    )
+
+
 def _ready_session(
     client: TestClient, *, headers: dict[str, str] | None = None
 ) -> dict[str, object]:
@@ -1862,7 +1877,7 @@ def test_m3_text_realtime_flow_is_private_long_and_idempotent(
             "live_transcription_configured": False,
             "final_transcription_configured": False,
             "typed_answer_max_characters": 20_000,
-            "supported_durations": [15, 30, 45, 60],
+            "supported_durations": [2, 5, 15, 30, 45, 60],
         }
 
         secret = realtime_client.post(
@@ -2807,7 +2822,7 @@ def test_react_build_is_served_from_fastapi(tmp_path: Path) -> None:
         response = static_client.get("/practice/example")
 
     assert response.status_code == 200
-    assert "<title>AI Interview Coach</title>" in response.text
+    assert "<title>Rocky · Live Interview Preparation</title>" in response.text
 
 
 def test_m4_completion_generates_one_evidence_backed_report(

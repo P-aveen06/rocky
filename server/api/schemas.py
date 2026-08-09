@@ -31,6 +31,18 @@ class CreateInterviewRequest(BaseModel):
         return normalized
 
 
+class UpdateInterviewRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+
+    @field_validator("title")
+    @classmethod
+    def normalize_title(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Title must contain visible characters.")
+        return normalized
+
+
 class InterviewResponse(BaseModel):
     id: str
     title: str

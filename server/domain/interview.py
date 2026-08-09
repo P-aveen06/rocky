@@ -9,7 +9,7 @@ InterviewType = Literal["technical_behavioral", "technical", "behavioral"]
 Speaker = Literal["user", "assistant"]
 DeliveryStatus = Literal["pending", "acknowledged"]
 
-SUPPORTED_DURATIONS = (15, 30, 45, 60)
+SUPPORTED_DURATIONS = (2, 5, 15, 30, 45, 60)
 ACTIVE_INTERVIEW_STATES = {
     "CONNECTING",
     "IN_PROGRESS",

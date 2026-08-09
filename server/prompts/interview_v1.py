@@ -19,6 +19,16 @@ PROMPT_VERSION = "browser-interview-v1"
 
 def _section_plan(duration_minutes: int) -> list[dict[str, object]]:
     plans = {
+        2: [
+            ("Focused evidence probe", 1),
+            ("Role-fit follow-up", 1),
+        ],
+        5: [
+            ("Introduction", 1),
+            ("Focused evidence probe", 2),
+            ("Role-fit follow-up", 1),
+            ("Wrap-up", 1),
+        ],
         15: [
             ("Introduction", 2),
             ("Project deep dive", 4),
@@ -155,6 +165,8 @@ engineering interview.
 INTERVIEW POLICY
 - Begin by briefly explaining the format, then ask exactly one question and wait.
 - Ask one question at a time. Keep spoken turns concise and natural.
+- For 2- or 5-minute quick practice, move directly to one focused evidence
+  probe and keep any follow-up brief.
 - Adapt follow-ups using this ladder: understanding, application, alternatives,
   failure handling, improvement and scale.
 - Treat résumé evidence as a lead, not proof. Ask what the candidate personally did.
