@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { api, ApiError } from "./api";
+import { loadSampleResume, SAMPLE_ROLES, type SampleRole } from "./samples";
 import {
   ArrowLeftIcon,
   CheckIcon,
@@ -78,6 +79,7 @@ export function SetupPage({
   );
   const [scorecardDraft, setScorecardDraft] = useState<Scorecard | null>(null);
   const [resume, setResume] = useState<File | null>(null);
+  const [loadedSample, setLoadedSample] = useState<string | null>(null);
   const [roleTitle, setRoleTitle] = useState("");
   const [seniority, setSeniority] = useState<Seniority>("mid");
   const [jobDescription, setJobDescription] = useState("");
@@ -181,6 +183,36 @@ export function SetupPage({
   );
   const editedClaimCount =
     profileDraft?.claims.filter((claim) => claim.edited).length ?? 0;
+
+  /**
+   * Fill in a sample resume and its matching job description together.
+   *
+   * The resume is fetched and handed to the same state the file picker sets,
+   * so extraction runs down the ordinary path from here on.
+   */
+  async function applySample(role: SampleRole) {
+    setError(null);
+    setNotice(null);
+    try {
+      const file = await loadSampleResume(role);
+      setResume(file);
+      setJobDescription(role.jobDescription);
+      setLoadedSample(role.id);
+      setNotice(
+        `Loaded the ${role.label} sample. Select Extract profile to continue.`,
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught
+          : new ApiError(
+              caught instanceof Error
+                ? caught.message
+                : "The sample could not be loaded.",
+            ),
+      );
+    }
+  }
 
   async function extractResume() {
     if (!resume) {
@@ -597,6 +629,30 @@ export function SetupPage({
                   </button>
                 </div>
               )}
+              {!setup.profile ? (
+                <div className="sample-picker">
+                  <p className="sample-picker__lede">
+                    No résumé or job description to hand? Load a sample and try
+                    the whole thing.
+                  </p>
+                  <div className="sample-picker__options">
+                    {SAMPLE_ROLES.map((role) => (
+                      <button
+                        key={role.id}
+                        className={`sample-option ${
+                          loadedSample === role.id ? "is-active" : ""
+                        }`}
+                        type="button"
+                        disabled={working !== null}
+                        onClick={() => applySample(role)}
+                      >
+                        <strong>{role.label}</strong>
+                        <small>{role.summary}</small>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               {profileDraft ? (
                 <div className="profile-editor">
