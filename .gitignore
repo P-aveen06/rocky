@@ -1,0 +1,33 @@
+# Working notes, specs, plans, and product docs. Local-only by design.
+.meta/
+
+# Secrets and local runtime state
+.env
+.env.local
+data/
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Web
+web/node_modules/
+web/dist/
+web/coverage/
+web/*.tsbuildinfo
+
+# Tooling
+.DS_Store
+.gstack/
+.worktrees/
+
+# Local editor settings
+.vscode/
+.idea/
