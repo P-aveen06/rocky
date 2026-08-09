@@ -54,7 +54,10 @@ def content_security_policy(settings: Settings) -> str:
     img_src = ["'self'", "data:"]
     frame_src = ["'none'"]
 
-    if settings.auth_mode == "clerk":
+    # Keyed on the publishable key rather than auth_mode: the browser loads
+    # Clerk whenever the client was built with a key, and if the policy
+    # disagrees the script is blocked and the page renders blank.
+    if settings.clerk_publishable_key:
         clerk_origins = [_CLERK_DEV_ORIGIN]
         explicit = (settings.clerk_frontend_api_url or "").strip().rstrip("/")
         if explicit and explicit not in clerk_origins:

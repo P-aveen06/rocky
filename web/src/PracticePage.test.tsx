@@ -163,6 +163,7 @@ const interview: InterviewSession = {
 };
 
 const capabilities: Capabilities = {
+  guest_access_enabled: false,
   text_dev_mode_enabled: true,
   realtime_configured: true,
   live_transcription_configured: true,

@@ -54,6 +54,9 @@ class InterviewListResponse(BaseModel):
 
 
 class CapabilityResponse(BaseModel):
+    # Whether a visitor can start without signing up. The client cannot infer
+    # this from its own build, so the server says.
+    guest_access_enabled: bool = False
     text_dev_mode_enabled: bool
     realtime_configured: bool
     live_transcription_configured: bool

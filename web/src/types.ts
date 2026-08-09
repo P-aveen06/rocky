@@ -35,6 +35,8 @@ export type InputMode = "voice" | "text_dev";
 export type InterviewType = "technical_behavioral" | "technical" | "behavioral";
 
 export interface Capabilities {
+  /** Whether a visitor can start without signing up. */
+  guest_access_enabled: boolean;
   text_dev_mode_enabled: boolean;
   realtime_configured: boolean;
   live_transcription_configured: boolean;

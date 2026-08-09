@@ -2896,3 +2896,30 @@ h3 {
     grid-template-columns: minmax(var(--space-0), 1fr);
   }
 }
+
+/* Guest access: name and email instead of signing up. */
+.auth-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.auth-choice__alternative {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.guest-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.btn--small {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+}

@@ -12,6 +12,7 @@ router = APIRouter(prefix="/api/capabilities", tags=["capabilities"])
 @router.get("", response_model=CapabilityResponse)
 async def capabilities(request: Request) -> CapabilityResponse:
     return CapabilityResponse(
+        guest_access_enabled=request.app.state.settings.allow_guest_access,
         text_dev_mode_enabled=request.app.state.settings.enable_text_dev_mode,
         realtime_configured=request.app.state.settings.realtime_configured,
         live_transcription_configured=(

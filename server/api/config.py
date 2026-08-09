@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     local_auth_subject: str = "local-developer"
     local_auth_email: str = "developer@local.test"
     local_auth_name: str = "Local developer"
+    # Guests give a name and email instead of signing up, and get the same
+    # capabilities as anyone else. Their identity is derived from the email, so
+    # returning with the same address lands back in the same sessions.
+    allow_guest_access: bool = False
+    guest_token_secret: SecretStr | None = None
+    guest_token_ttl_days: int = 7
     clerk_secret_key: SecretStr | None = None
     clerk_publishable_key: str | None = None
     # PEM public key from the Clerk dashboard. When present the backend verifies
@@ -133,7 +139,23 @@ class Settings(BaseSettings):
                 raise ValueError(
                     f"{' and '.join(missing)} must be set when AUTH_MODE is clerk."
                 )
+        if self.allow_guest_access and not self.guest_token_configured:
+            raise ValueError(
+                "GUEST_TOKEN_SECRET must be set when ALLOW_GUEST_ACCESS is true. "
+                "Without it guest sessions could be forged."
+            )
         return self
+
+    @property
+    def guest_token_configured(self) -> bool:
+        secret = (
+            self.guest_token_secret.get_secret_value().strip()
+            if self.guest_token_secret
+            else ""
+        )
+        # Short secrets are trivially brute-forced, and a guest token is a
+        # complete identity for as long as it lives.
+        return len(secret) >= 32
 
     @property
     def clerk_configured(self) -> bool:

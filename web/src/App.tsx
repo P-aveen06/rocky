@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "./api";
 import { AccountButton } from "./auth";
 import { clerkEnabled } from "./authConfig";
+import { readGuestSession } from "./guestSession";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import {
   ClockIcon,
@@ -36,6 +37,8 @@ function formatDate(value: string): string {
 }
 
 export function App() {
+  // A guest has no Clerk account, but still needs a way out of the session.
+  const guestActive = readGuestSession() !== null;
   const [user, setUser] = useState<User | null>(null);
   const [interviews, setInterviews] = useState<InterviewSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -195,7 +198,7 @@ export function App() {
         >
           {theme === "light" ? <MoonIcon /> : <SunIcon />}
         </button>
-        {clerkEnabled ? (
+        {clerkEnabled || guestActive ? (
           <AccountButton />
         ) : (
           <div

@@ -1844,6 +1844,7 @@ def test_m3_text_realtime_flow_is_private_long_and_idempotent(
         interview = _ready_session(realtime_client)
         capabilities = realtime_client.get("/api/capabilities").json()
         assert capabilities == {
+            "guest_access_enabled": False,
             "text_dev_mode_enabled": True,
             "realtime_configured": True,
             "live_transcription_configured": False,
@@ -2241,6 +2242,168 @@ def test_unauthenticated_managed_request_has_error_id(tmp_path: Path) -> None:
 
     assert response.status_code == 401
     assert response.headers["X-Error-ID"] == response.json()["error"]["id"]
+
+
+def _guest_settings(tmp_path: Path, name: str, **overrides: object) -> Settings:
+    values: dict[str, object] = {
+        "_env_file": None,
+        "app_env": "test",
+        "auth_mode": "clerk",
+        "clerk_secret_key": "sk_test_example",
+        "clerk_publishable_key": "pk_test_example",
+        "clerk_frontend_api_url": _CLERK_ISSUER,
+        "clerk_jwt_key": _clerk_keys()[1],
+        "allow_guest_access": True,
+        "guest_token_secret": "y" * 48,
+        "database_url": f"sqlite+aiosqlite:///{tmp_path / name}",
+        "auto_create_schema": True,
+        "web_dist_dir": tmp_path / "missing-dist",
+    }
+    values.update(overrides)
+    return Settings(**values)
+
+
+def test_guest_can_do_everything_a_signed_up_account_can(tmp_path: Path) -> None:
+    """A guest gives a name and email and is otherwise an ordinary account."""
+
+    settings = _guest_settings(tmp_path, "guest.db")
+    with TestClient(create_app(settings)) as client:
+        started = client.post(
+            "/api/auth/guest",
+            json={"full_name": "Dana Guest", "email": "Dana.Guest@example.com"},
+        )
+        assert started.status_code == 200
+        token = started.json()["token"]
+        assert started.json()["user"]["display_name"] == "Dana Guest"
+
+        headers = {"Authorization": f"Bearer {token}"}
+        assert client.get("/api/auth/me", headers=headers).status_code == 200
+        created = client.post(
+            "/api/interviews", headers=headers, json={"title": "Guest practice"}
+        )
+        assert created.status_code == 201
+        listed = client.get("/api/interviews", headers=headers)
+        assert [item["title"] for item in listed.json()["items"]] == ["Guest practice"]
+
+
+def test_returning_guest_reopens_the_same_sessions(tmp_path: Path) -> None:
+    """Identity comes from the email, so coming back is not starting over."""
+
+    settings = _guest_settings(tmp_path, "returning.db")
+    with TestClient(create_app(settings)) as client:
+
+        def sign_in(email: str) -> dict[str, str]:
+            response = client.post(
+                "/api/auth/guest", json={"full_name": "Dana", "email": email}
+            )
+            assert response.status_code == 200
+            return {"Authorization": f"Bearer {response.json()['token']}"}
+
+        first = sign_in("dana@example.com")
+        client.post("/api/interviews", headers=first, json={"title": "Earlier work"})
+
+        # Same address, different casing, and a brand new token.
+        again = sign_in("DANA@example.com")
+        assert [
+            item["title"]
+            for item in client.get("/api/interviews", headers=again).json()["items"]
+        ] == ["Earlier work"]
+
+        # A different address is a different person.
+        other = sign_in("someone-else@example.com")
+        assert client.get("/api/interviews", headers=other).json()["items"] == []
+
+
+def test_guest_token_outranks_the_local_developer_identity(tmp_path: Path) -> None:
+    """A guest must not be silently swapped for the local developer.
+
+    Local mode assumes a single developer identity. If that is checked first,
+    a guest who has just given a name and email is handed somebody else's
+    workspace, which is how this was found.
+    """
+
+    settings = _guest_settings(tmp_path, "local-guest.db", auth_mode="local")
+    with TestClient(create_app(settings)) as client:
+        # The local developer has work of their own.
+        client.post("/api/interviews", json={"title": "Developer's own session"})
+
+        started = client.post(
+            "/api/auth/guest",
+            json={"full_name": "Priya", "email": "priya@example.com"},
+        )
+        assert started.status_code == 200
+        headers = {"Authorization": f"Bearer {started.json()['token']}"}
+
+        identity = client.get("/api/auth/me", headers=headers)
+        assert identity.json()["display_name"] == "Priya"
+        assert identity.json()["email"] == "priya@example.com"
+        assert client.get("/api/interviews", headers=headers).json()["items"] == []
+
+        # And with no token the local developer still sees their own.
+        assert [
+            item["title"] for item in client.get("/api/interviews").json()["items"]
+        ] == ["Developer's own session"]
+
+
+def test_guest_sessions_cannot_be_forged(tmp_path: Path) -> None:
+    """The signature is what makes a guest token an identity."""
+
+    settings = _guest_settings(tmp_path, "forged.db")
+    claims = {
+        "iss": "interview-coach-guest",
+        "sub": "guest:" + "a" * 32,
+        "email": "impostor@example.com",
+        "name": "Impostor",
+        "exp": int(time.time()) + 3600,
+    }
+    with TestClient(create_app(settings)) as client:
+        wrong_secret = jwt.encode(claims, "z" * 48, algorithm="HS256")
+        assert (
+            client.get(
+                "/api/auth/me", headers={"Authorization": f"Bearer {wrong_secret}"}
+            ).status_code
+            == 401
+        )
+
+        # "alg": "none" must not be accepted as a signature.
+        unsigned = jwt.encode(claims, key="", algorithm="none")
+        assert (
+            client.get(
+                "/api/auth/me", headers={"Authorization": f"Bearer {unsigned}"}
+            ).status_code
+            == 401
+        )
+
+        expired = jwt.encode(
+            {**claims, "exp": int(time.time()) - 60}, "y" * 48, algorithm="HS256"
+        )
+        assert (
+            client.get(
+                "/api/auth/me", headers={"Authorization": f"Bearer {expired}"}
+            ).status_code
+            == 401
+        )
+
+
+def test_guest_access_is_off_unless_switched_on(tmp_path: Path) -> None:
+    settings = _guest_settings(tmp_path, "off.db", allow_guest_access=False)
+    with TestClient(create_app(settings)) as client:
+        response = client.post(
+            "/api/auth/guest", json={"full_name": "Dana", "email": "dana@example.com"}
+        )
+        assert response.status_code == 404
+
+
+def test_guest_access_refuses_to_start_without_a_strong_secret() -> None:
+    """A weak secret would make every guest identity forgeable."""
+
+    with pytest.raises(ValidationError):
+        Settings(
+            _env_file=None,
+            app_env="test",
+            allow_guest_access=True,
+            guest_token_secret="short",
+        )
 
 
 def test_concurrent_first_requests_create_one_user(tmp_path: Path) -> None:

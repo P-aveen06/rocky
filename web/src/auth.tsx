@@ -10,6 +10,12 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { setAuthTokenProvider } from "./api";
 import { clerkEnabled, clerkPublishableKey } from "./authConfig";
+import { GuestSignIn } from "./GuestSignIn";
+import {
+  clearGuestSession,
+  readGuestSession,
+  type GuestSession,
+} from "./guestSession";
 
 function TokenBridge({ children }: { children: ReactNode }) {
   const { getToken, isLoaded } = useAuth();
@@ -27,8 +33,65 @@ function TokenBridge({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/** Serves the stored guest token, and holds render until it is registered. */
+function GuestBridge({
+  session,
+  children,
+}: {
+  session: GuestSession;
+  children: ReactNode;
+}) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setAuthTokenProvider(async () => session.token);
+    setReady(true);
+    return () => setAuthTokenProvider(null);
+  }, [session.token]);
+
+  if (!ready) return null;
+  return <>{children}</>;
+}
+
 export function AuthGate({ children }: { children: ReactNode }) {
-  if (!clerkEnabled) return <>{children}</>;
+  // Read once on mount: a stored guest token means this visitor is already in.
+  const [guest, setGuest] = useState<GuestSession | null>(readGuestSession);
+  const [choosingGuest, setChoosingGuest] = useState(false);
+  const [guestOffered, setGuestOffered] = useState<boolean | null>(null);
+
+  // Whether guests are allowed is the server's decision, and the client cannot
+  // infer it from its own build.
+  useEffect(() => {
+    if (guest) return;
+    let active = true;
+    fetch("/api/capabilities", { headers: { Accept: "application/json" } })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: { guest_access_enabled?: boolean } | null) => {
+        if (active) setGuestOffered(Boolean(body?.guest_access_enabled));
+      })
+      .catch(() => {
+        if (active) setGuestOffered(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [guest]);
+
+  if (guest) {
+    return <GuestBridge session={guest}>{children}</GuestBridge>;
+  }
+
+  // Without Clerk the app runs on the local identity, unless the server is
+  // offering guest access, in which case a visitor should be asked who they are.
+  if (!clerkEnabled) {
+    if (guestOffered === null) return null;
+    if (!guestOffered) return <>{children}</>;
+    return (
+      <main className="auth-page">
+        <GuestSignIn onStarted={setGuest} />
+      </main>
+    );
+  }
 
   return (
     <ClerkProvider
@@ -41,7 +104,28 @@ export function AuthGate({ children }: { children: ReactNode }) {
     >
       <SignedOut>
         <main className="auth-page">
-          <SignIn routing="hash" />
+          {choosingGuest ? (
+            <GuestSignIn
+              onStarted={setGuest}
+              onCancel={() => setChoosingGuest(false)}
+            />
+          ) : (
+            <div className="auth-choice">
+              <SignIn routing="hash" />
+              {guestOffered ? (
+                <div className="auth-choice__alternative">
+                  <span>Just want to try it?</span>
+                  <button
+                    className="btn btn--ghost"
+                    type="button"
+                    onClick={() => setChoosingGuest(true)}
+                  >
+                    Continue as guest
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          )}
         </main>
       </SignedOut>
       <SignedIn>
@@ -51,8 +135,24 @@ export function AuthGate({ children }: { children: ReactNode }) {
   );
 }
 
-/** Clerk's account menu, or nothing at all when running without Clerk. */
+/** Account menu for a signed-in user, or a way out for a guest. */
 export function AccountButton() {
+  const guest = readGuestSession();
+  if (guest) {
+    return (
+      <button
+        className="btn btn--ghost btn--small"
+        type="button"
+        title={guest.email}
+        onClick={() => {
+          clearGuestSession();
+          window.location.reload();
+        }}
+      >
+        Leave guest session
+      </button>
+    );
+  }
   if (!clerkEnabled) return null;
   return <UserButton afterSignOutUrl="/" />;
 }

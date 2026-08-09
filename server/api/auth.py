@@ -7,6 +7,7 @@ import hashlib
 import logging
 import ssl
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Annotated
 
@@ -169,9 +170,108 @@ def _clerk_principal(request: Request, settings: Settings) -> AuthenticatedPrinc
     return AuthenticatedPrincipal(subject, email, display_name)
 
 
+GUEST_ISSUER = "interview-coach-guest"
+GUEST_SUBJECT_PREFIX = "guest:"
+_GUEST_ALGORITHM = "HS256"
+
+
+def guest_subject(email: str) -> str:
+    """Derive a stable identity from the email a guest gave.
+
+    Deterministic so that returning with the same address lands back in the
+    same sessions. Hashed so the raw address is not the primary key, and
+    prefixed so guests are always distinguishable from signed-up accounts.
+    """
+
+    digest = hashlib.sha256(email.strip().casefold().encode()).hexdigest()
+    return f"{GUEST_SUBJECT_PREFIX}{digest[:32]}"
+
+
+def issue_guest_token(
+    settings: Settings, *, email: str, display_name: str
+) -> tuple[str, datetime]:
+    """Mint a signed guest session token and return it with its expiry."""
+
+    secret = (
+        settings.guest_token_secret.get_secret_value()
+        if settings.guest_token_secret
+        else ""
+    )
+    if not settings.guest_token_configured:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Guest access is not configured.",
+        )
+    expires_at = datetime.now(UTC) + timedelta(days=settings.guest_token_ttl_days)
+    token = jwt.encode(
+        {
+            "iss": GUEST_ISSUER,
+            "sub": guest_subject(email),
+            "email": email,
+            "name": display_name,
+            "iat": int(datetime.now(UTC).timestamp()),
+            "exp": int(expires_at.timestamp()),
+        },
+        secret,
+        algorithm=_GUEST_ALGORITHM,
+    )
+    return token, expires_at
+
+
+def _guest_principal(token: str, settings: Settings) -> AuthenticatedPrincipal:
+    if not settings.allow_guest_access or not settings.guest_token_configured:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Guest access is not available.",
+        )
+    secret = settings.guest_token_secret.get_secret_value()  # type: ignore[union-attr]
+    try:
+        claims = jwt.decode(
+            token,
+            secret,
+            # Pinned: without this a token could name its own algorithm and a
+            # forged RS256 token would be checked against the wrong key.
+            algorithms=[_GUEST_ALGORITHM],
+            issuer=GUEST_ISSUER,
+            options={"verify_aud": False, "require": ["exp", "sub"]},
+            leeway=5,
+        )
+    except jwt.PyJWTError as exc:
+        logger.warning("invalid_guest_token", exc_info=exc)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This guest session has expired. Start a new one.",
+        ) from exc
+
+    subject = str(claims.get("sub") or "")
+    email = str(claims.get("email") or "").strip()
+    name = str(claims.get("name") or "").strip() or email
+    if not subject.startswith(GUEST_SUBJECT_PREFIX) or not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="The guest session was malformed.",
+        )
+    return AuthenticatedPrincipal(subject, email, name)
+
+
 def principal_from_request(
     request: Request, settings: Settings
 ) -> AuthenticatedPrincipal:
+    # Checked before the local fallback on purpose. A guest token is an
+    # explicit identity someone just presented, so it has to outrank the
+    # single developer identity that local mode assumes; otherwise a guest
+    # signs in and silently lands in somebody else's workspace.
+    token = _bearer_token(request)
+    if token and settings.allow_guest_access:
+        # Guest tokens are symmetric, Clerk's are RS256. Reading the declared
+        # algorithm only picks the verification path; each path then verifies
+        # the signature properly against its own key.
+        try:
+            declared = jwt.get_unverified_header(token).get("alg")
+        except jwt.PyJWTError:
+            declared = None
+        if declared == _GUEST_ALGORITHM:
+            return _guest_principal(token, settings)
     if settings.auth_mode == "local":
         return AuthenticatedPrincipal(
             subject=settings.local_auth_subject,
@@ -186,7 +286,19 @@ async def get_current_user(
     database: Annotated[AsyncSession, Depends(get_database_session)],
 ) -> User:
     settings: Settings = request.app.state.settings
-    principal = principal_from_request(request, settings)
+    return await resolve_user(database, principal_from_request(request, settings))
+
+
+async def resolve_user(
+    database: AsyncSession, principal: AuthenticatedPrincipal
+) -> User:
+    """Find or create the account for an already-verified identity.
+
+    Separate from the request dependency so that guest sign-in, which has just
+    minted the identity itself, can reuse it without having to fabricate a
+    request to read the token back out of.
+    """
+
     principal_hash = hashlib.sha256(
         f"principal:{principal.subject}".encode()
     ).hexdigest()
