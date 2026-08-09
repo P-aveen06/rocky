@@ -63,13 +63,16 @@ async def evaluate_transcript(
     deployment = settings.azure_openai_text_deployment.strip()
     resolved_client = client or _configured_client(settings)
     evaluator_version = f"azure:{deployment}:{PROMPT_VERSION}"
+    competency_aliases, turn_aliases = _identifier_aliases(scorecard, turns)
+    alias_by_competency = {real: alias for alias, real in competency_aliases.items()}
+    alias_by_turn = {real: alias for alias, real in turn_aliases.items()}
     request_payload: dict[str, object] = {
         "candidate_seniority": seniority,
         "interview_prompt_version": interview_prompt_version,
         "evaluator_prompt_version": PROMPT_VERSION,
         "scorecard": [
             {
-                "competency_id": competency.id,
+                "competency_id": alias_by_competency[competency.id],
                 "name": competency.name,
                 "description": competency.description,
                 "weight": competency.weight,
@@ -80,7 +83,9 @@ async def evaluate_transcript(
             for competency in scorecard.competencies
         ],
         "interview_section_timings": interview_section_timings,
-        "ordered_transcript": [turn.model_dump() for turn in turns],
+        "ordered_transcript": [
+            {**turn.model_dump(), "id": alias_by_turn[turn.id]} for turn in turns
+        ],
     }
     wait_seconds = timeout_seconds or settings.resume_llm_timeout_seconds
     last_issues: list[str] = []
@@ -90,7 +95,12 @@ async def evaluate_transcript(
         if last_issues:
             attempt_payload["regeneration_required"] = {
                 "reason": "The prior output failed evidence-integrity validation.",
-                "validation_issues": last_issues,
+                # Issues name real identifiers, which the model was never shown.
+                # Feeding those back would ask it to correct something using
+                # values it has no way to recognise.
+                "validation_issues": _aliased_issues(
+                    last_issues, alias_by_competency, alias_by_turn
+                ),
                 "instruction": "Regenerate the complete evaluation from source data.",
             }
         parsed = await _request_evaluation(
@@ -103,10 +113,12 @@ async def evaluate_transcript(
             last_issues = ["structured evaluator output was empty"]
             continue
         try:
-            draft = (
+            draft = _restore_identifiers(
                 parsed
                 if isinstance(parsed, EvaluationDraft)
-                else EvaluationDraft.model_validate(parsed)
+                else EvaluationDraft.model_validate(parsed),
+                competency_aliases,
+                turn_aliases,
             )
             return validate_and_score_evaluation(
                 draft,
@@ -139,6 +151,71 @@ async def evaluate_transcript(
         "Your transcript is preserved; retry evaluation in a moment.",
         integrity_issues=last_issues,
     )
+
+
+def _identifier_aliases(
+    scorecard: ScorecardDocument, turns: list[EvaluationTranscriptTurn]
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Map short ordinal aliases to the real competency and turn identifiers.
+
+    Real identifiers are 23 and 36 character random strings, and the model has
+    to echo them back for every citation. It does not do so reliably: observed
+    output truncated one competency id, appended "-PLACEHOLDER" to another, and
+    invented turn ids outright, all of which the integrity validator then
+    rejected as fabricated evidence. Short ordinals copy cleanly, and the server
+    translates them back before anything is validated or stored.
+    """
+
+    competencies = {
+        f"c{index}": competency.id
+        for index, competency in enumerate(scorecard.competencies, start=1)
+    }
+    return competencies, {f"t{turn.sequence}": turn.id for turn in turns}
+
+
+def _restore_identifiers(
+    draft: EvaluationDraft,
+    competency_aliases: dict[str, str],
+    turn_aliases: dict[str, str],
+) -> EvaluationDraft:
+    """Translate aliases in a draft back to real identifiers.
+
+    An alias the model invented has no mapping, so it passes through unchanged
+    and is rejected downstream exactly as a fabricated identifier was before.
+    """
+
+    data = draft.model_dump()
+    for result in data["competency_results"]:
+        result["competency_id"] = competency_aliases.get(
+            result["competency_id"], result["competency_id"]
+        )
+        for citation in result.get("evidence") or []:
+            citation["turn_id"] = turn_aliases.get(
+                citation["turn_id"], citation["turn_id"]
+            )
+    for field in ("strength_competency_ids", "gap_competency_ids"):
+        data[field] = [competency_aliases.get(value, value) for value in data[field]]
+    for exercise in data["practice_exercises"]:
+        exercise["competency_ids"] = [
+            competency_aliases.get(value, value) for value in exercise["competency_ids"]
+        ]
+    return EvaluationDraft.model_validate(data)
+
+
+def _aliased_issues(
+    issues: list[str],
+    alias_by_competency: dict[str, str],
+    alias_by_turn: dict[str, str],
+) -> list[str]:
+    """Rewrite validation issues into the identifiers the model was given."""
+
+    replacements = {**alias_by_competency, **alias_by_turn}
+    rewritten = []
+    for issue in issues:
+        for real, alias in replacements.items():
+            issue = issue.replace(real, alias)
+        rewritten.append(issue)
+    return rewritten
 
 
 async def _request_evaluation(

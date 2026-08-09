@@ -174,6 +174,68 @@ def test_delivery_style_cannot_enter_role_fit_contract() -> None:
 
 
 @pytest.mark.asyncio
+async def test_model_is_given_short_aliases_instead_of_real_identifiers() -> None:
+    """Real identifiers must never reach the model, and aliases must come back.
+
+    Against a real 99-turn transcript the model truncated one competency id,
+    appended "-PLACEHOLDER" to another, and invented turn ids outright. Every
+    one read as fabricated evidence and the whole report was discarded. Ordinal
+    aliases are short enough to copy reliably, and the server maps them back.
+    """
+
+    scorecard, turns, valid = _contracts()
+    competency_alias = {
+        competency.id: f"c{index}"
+        for index, competency in enumerate(scorecard.competencies, start=1)
+    }
+    turn_alias = {turn.id: f"t{turn.sequence}" for turn in turns}
+
+    answered = valid.model_dump()
+    for result in answered["competency_results"]:
+        result["competency_id"] = competency_alias[result["competency_id"]]
+        for citation in result.get("evidence") or []:
+            citation["turn_id"] = turn_alias[citation["turn_id"]]
+    for field in ("strength_competency_ids", "gap_competency_ids"):
+        answered[field] = [competency_alias[value] for value in answered[field]]
+    for exercise in answered["practice_exercises"]:
+        exercise["competency_ids"] = [
+            competency_alias[value] for value in exercise["competency_ids"]
+        ]
+
+    fake_responses = FakeResponses([EvaluationDraft.model_validate(answered)])
+    report = await evaluate_transcript(
+        scorecard=scorecard,
+        seniority="mid",
+        turns=turns,
+        interview_section_timings=[{"section": "Technical", "minutes": 10}],
+        interview_prompt_version="browser-interview-v1",
+        settings=_settings(),
+        client=SimpleNamespace(responses=fake_responses),
+    )
+
+    # Answering entirely in aliases has to validate first time, with no repair.
+    assert len(fake_responses.calls) == 1
+
+    sent = json.loads(fake_responses.calls[0]["input"][1]["content"])
+    assert [item["competency_id"] for item in sent["scorecard"]] == [
+        f"c{index}" for index in range(1, len(scorecard.competencies) + 1)
+    ]
+    assert [item["id"] for item in sent["ordered_transcript"]] == [
+        f"t{turn.sequence}" for turn in turns
+    ]
+    serialized = json.dumps(sent)
+    for competency in scorecard.competencies:
+        assert competency.id not in serialized
+    for turn in turns:
+        assert turn.id not in serialized
+
+    # What is stored carries the real identifiers, never the aliases.
+    scorecard_ids = {competency.id for competency in scorecard.competencies}
+    assert report.competency_results
+    assert {item.competency_id for item in report.competency_results} <= scorecard_ids
+
+
+@pytest.mark.asyncio
 async def test_service_regenerates_once_after_invalid_evidence() -> None:
     scorecard, turns, valid = _contracts()
     invalid_payload = valid.model_dump()
