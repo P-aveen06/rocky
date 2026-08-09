@@ -91,7 +91,7 @@ practising next.
 
 ![Rocky dashboard](docs/screenshots/dashboard.png)
 
-### 1 · Résumé becomes evidence
+### 1 · Resume becomes evidence
 
 Upload a PDF or DOCX. Rocky extracts claims and groups them into summary,
 experience, skills and education — and every single one links back to the
@@ -188,7 +188,7 @@ and never pretends to.
 
 ---
 
-## The technical part
+## The Technical Part
 
 ### How it fits together
 
@@ -404,9 +404,3 @@ The whole thing was built in a 20-hour hackathon. The
 [landing page](https://app-2c7f-8000.prg1.zerops.app/#journey) has the hour-by-hour
 version, and the [write-up](https://medium.com/@paveenkumar.dev/rocky-3717406e2db2)
 has the honest one.
-
-## Credits
-
-Illustrations are from the **The Little Things** Blush collection by Susana
-Salas; source and licence notes live in `design/assets/blush/SOURCES.md`. The
-mission patch and everything derived from it are in `design/assets/brand/`.
