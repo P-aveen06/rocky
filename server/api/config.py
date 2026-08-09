@@ -107,11 +107,26 @@ class Settings(BaseSettings):
                     "AUTO_CREATE_SCHEMA must be false in staging and production. "
                     "Alembic owns the schema outside local development."
                 )
-        if self.auth_mode == "clerk" and not self.clerk_configured:
-            raise ValueError(
-                "CLERK_SECRET_KEY and CLERK_PUBLISHABLE_KEY are required when "
-                "AUTH_MODE is clerk."
+        if self.auth_mode == "clerk":
+            secret = (
+                self.clerk_secret_key.get_secret_value()
+                if self.clerk_secret_key
+                else ""
             )
+            missing = [
+                name
+                for name, value in (
+                    ("CLERK_SECRET_KEY", secret),
+                    ("CLERK_PUBLISHABLE_KEY", self.clerk_publishable_key or ""),
+                )
+                if not value.strip()
+            ]
+            if missing:
+                # Name the ones actually absent. Listing both when only one is
+                # missing sends you looking in the wrong place.
+                raise ValueError(
+                    f"{' and '.join(missing)} must be set when AUTH_MODE is clerk."
+                )
         return self
 
     @property
