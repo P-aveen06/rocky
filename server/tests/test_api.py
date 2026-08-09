@@ -208,6 +208,13 @@ def test_neon_url_is_safe_for_asyncpg() -> None:
     assert connect_args["timeout"] == 7.5
 
 
+def test_zerops_internal_postgres_url_uses_private_network_defaults() -> None:
+    url = normalized_database_url("postgresql://db:secret@db.zerops:5432/db")
+
+    assert url == "postgresql+asyncpg://db:secret@db.zerops:5432/db"
+    assert database_connect_args(url) == {}
+
+
 @pytest.mark.asyncio
 async def test_neon_connection_prefers_ipv4_without_changing_tls_hostname() -> None:
     calls: list[tuple[str | None, int | None, dict[str, object]]] = []

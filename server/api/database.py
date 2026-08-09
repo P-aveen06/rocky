@@ -95,6 +95,9 @@ def database_connect_args(
         return {"check_same_thread": False}
     hostname = urlsplit(normalized).hostname
     if not _is_managed_postgres_host(hostname):
+        # Zerops PostgreSQL is reached directly on the project's private
+        # network. Its generated URL therefore needs neither public TLS setup
+        # nor managed-provider query adaptation here.
         return {}
     connect_args: dict[str, object] = {
         "ssl": ssl.create_default_context(

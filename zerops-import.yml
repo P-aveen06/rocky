@@ -1,15 +1,21 @@
 # One-time infrastructure definition. Import with:
 #   zcli project project-import zerops-import.yml
 #
-# The database lives in Supabase rather than Zerops, so this project holds a
-# single runtime service. Repeat deploys are driven by zerops.yml through the
-# GitHub Actions workflow, not by re-importing this file.
+# The project owns both the application runtime and its PostgreSQL database.
+# Repeat application deploys are driven by zerops.yml through the GitHub Actions
+# workflow, not by re-importing this file.
 project:
   name: rocky
   tags:
     - hackathon
 
 services:
+  - hostname: db
+    type: postgresql:single@17
+    # The application is an OLTP workload. Hobby keeps the hackathon deployment
+    # inexpensive while retaining managed backups and vertical autoscaling.
+    profile: oltp-hobby
+
   - hostname: app
     type: python@3.12
     enableSubdomainAccess: true
@@ -23,10 +29,6 @@ services:
     # PLACEHOLDERS. Replace these in the Zerops GUI under Service -> Environment
     # variables, or edit them before importing. Never commit real values.
     envSecrets:
-      # Copy the exact value from .env.local: the Supabase *session* pooler on
-      # port 5432, username postgres.PROJECTREF. See README for why not the
-      # direct db.PROJECTREF.supabase.co endpoint.
-      DATABASE_URL: postgresql://postgres.REPLACE:REPLACE@aws-0-REGION.pooler.supabase.com:5432/postgres
       # Copy from .env.
       CLERK_SECRET_KEY: sk_test_REPLACE_ME
       # Optional: the PEM public key from Clerk -> API keys. With it set, session
