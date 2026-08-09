@@ -169,7 +169,7 @@ const capabilities: Capabilities = {
   live_transcription_configured: true,
   final_transcription_configured: true,
   typed_answer_max_characters: 20_000,
-  supported_durations: [15, 30, 45, 60],
+  supported_durations: [2, 5, 15, 30, 45, 60],
 };
 
 const CALLS_URL = "https://calls.test/rtc";
@@ -524,6 +524,17 @@ afterEach(() => {
 });
 
 describe("Realtime practice room", () => {
+  it("offers two and five minute quick-practice durations", async () => {
+    mockInitialRequests(runtime());
+
+    renderPage({});
+
+    const duration = await screen.findByRole("combobox", { name: "Duration" });
+    expect(duration).toHaveDisplayValue("15 minutes");
+    expect(screen.getByRole("option", { name: "2 minutes" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "5 minutes" })).toBeInTheDocument();
+  });
+
   it("offers separate opt-in consent only for voice delivery coaching", async () => {
     mockInitialRequests(runtime());
 

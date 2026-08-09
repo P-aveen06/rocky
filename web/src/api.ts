@@ -92,6 +92,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ title: "Untitled practice session" }),
     }),
+  updateInterviewTitle: (interviewId: string, title: string) =>
+    request<InterviewSession>(`/api/interviews/${interviewId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ title }),
+    }),
   deleteInterview: (interviewId: string) =>
     request<void>(`/api/interviews/${interviewId}`, {
       method: "DELETE",

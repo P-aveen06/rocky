@@ -88,7 +88,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     if (guestOffered === null) return null;
     if (!guestOffered) return <>{children}</>;
     return (
-      <main className="auth-page">
+      <main className="auth-page auth-page--guest">
         <GuestSignIn onStarted={setGuest} />
       </main>
     );
@@ -104,7 +104,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       telemetry={{ disabled: true }}
     >
       <SignedOut>
-        <main className="auth-page">
+        <main className={`auth-page ${choosingGuest ? "auth-page--guest" : ""}`}>
           {choosingGuest ? (
             <GuestSignIn
               onStarted={setGuest}

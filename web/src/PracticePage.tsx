@@ -1000,13 +1000,13 @@ export function PracticePage({
                   value={duration}
                   onChange={(event) => setDuration(Number(event.target.value))}
                 >
-                  {(capabilities?.supported_durations ?? [15, 30, 45, 60]).map(
-                    (minutes) => (
-                      <option value={minutes} key={minutes}>
-                        {minutes} minutes
-                      </option>
-                    ),
-                  )}
+                  {(
+                    capabilities?.supported_durations ?? [2, 5, 15, 30, 45, 60]
+                  ).map((minutes) => (
+                    <option value={minutes} key={minutes}>
+                      {minutes} minutes
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="field">

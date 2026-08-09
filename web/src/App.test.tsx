@@ -162,6 +162,64 @@ describe("session dashboard", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
   });
 
+  it("renames a practice session from the setup header", async () => {
+    const renamedSession = {
+      ...createdSession,
+      title: "Platform leadership rehearsal",
+    };
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(currentUser), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ items: [createdSession] }), {
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            upload: null,
+            profile: null,
+            job_target: null,
+            scorecard: null,
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(renamedSession), { status: 200 }),
+      );
+
+    render(<App />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Continue setup" }),
+    );
+    await screen.findByRole("heading", { name: "Résumé profile" });
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Edit session name" }),
+    );
+    const title = screen.getByLabelText("Session name");
+    await userEvent.clear(title);
+    await userEvent.type(title, "Platform leadership rehearsal");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Platform leadership rehearsal",
+      }),
+    ).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/interviews/session-1",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ title: "Platform leadership rehearsal" }),
+      }),
+    );
+  });
+
   it("offers passwordless email sign-in when managed auth is required", async () => {
     vi.spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(

@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FocusEvent,
+} from "react";
 
 import { api, ApiError } from "./api";
 import paperworkIllustration from "./assets/blush/paperwork.png";
@@ -7,6 +13,7 @@ import {
   ArrowLeftIcon,
   CheckIcon,
   ChevronDownIcon,
+  EditIcon,
   FileIcon,
   UploadIcon,
 } from "./icons";
@@ -96,6 +103,10 @@ export function SetupPage({
   >(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(interview.title);
+  const [titleSaving, setTitleSaving] = useState(false);
+  const titleEditorRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -130,6 +141,10 @@ export function SetupPage({
       active = false;
     };
   }, [interview.id]);
+
+  useEffect(() => {
+    if (!editingTitle) setTitleDraft(interview.title);
+  }, [editingTitle, interview.title]);
 
   const totalWeight = useMemo(
     () =>
@@ -184,6 +199,52 @@ export function SetupPage({
   );
   const editedClaimCount =
     profileDraft?.claims.filter((claim) => claim.edited).length ?? 0;
+
+  function beginTitleEdit() {
+    setTitleDraft(interview.title);
+    setEditingTitle(true);
+    setError(null);
+  }
+
+  function cancelTitleEdit() {
+    setTitleDraft(interview.title);
+    setEditingTitle(false);
+  }
+
+  async function saveSessionTitle() {
+    const title = titleDraft.trim();
+    if (!title) {
+      setError(new ApiError("Give this practice session a name."));
+      return;
+    }
+    if (title === interview.title) {
+      setEditingTitle(false);
+      return;
+    }
+    setTitleSaving(true);
+    setError(null);
+    try {
+      const updated = await api.updateInterviewTitle(interview.id, title);
+      onInterviewUpdated(updated);
+      setTitleDraft(updated.title);
+      setEditingTitle(false);
+      setNotice("Practice session renamed.");
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught
+          : new ApiError("The practice session name could not be saved."),
+      );
+    } finally {
+      setTitleSaving(false);
+    }
+  }
+
+  function handleTitleEditorBlur(event: FocusEvent<HTMLFormElement>) {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget && titleEditorRef.current?.contains(nextTarget)) return;
+    void saveSessionTitle();
+  }
 
   /**
    * Fill in a sample resume and its matching job description together.
@@ -489,7 +550,64 @@ export function SetupPage({
       <section className="page-header setup-header">
         <div>
           <p className="section__eyebrow">Practice setup</p>
-          <h1 className="section__title">{interview.title}</h1>
+          {editingTitle ? (
+            <form
+              className="session-title-editor"
+              ref={titleEditorRef}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveSessionTitle();
+              }}
+              onBlur={handleTitleEditorBlur}
+            >
+              <label className="sr-only" htmlFor="session-title">
+                Session name
+              </label>
+              <input
+                className="input session-title-editor__input"
+                id="session-title"
+                value={titleDraft}
+                maxLength={120}
+                required
+                autoFocus
+                onChange={(event) => setTitleDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    cancelTitleEdit();
+                  }
+                }}
+              />
+              <button
+                className="btn btn--primary btn--sm"
+                type="submit"
+                disabled={titleSaving || !titleDraft.trim()}
+              >
+                {titleSaving ? "Saving…" : "Save"}
+              </button>
+              <button
+                className="btn btn--ghost btn--sm"
+                type="button"
+                disabled={titleSaving}
+                onClick={cancelTitleEdit}
+              >
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <div className="session-title-display">
+              <h1 className="section__title">{interview.title}</h1>
+              <button
+                className="icon-btn session-title-display__edit"
+                type="button"
+                aria-label="Edit session name"
+                title="Rename practice session"
+                onClick={beginTitleEdit}
+              >
+                <EditIcon />
+              </button>
+            </div>
+          )}
           <p className="section__lede">
             Review the evidence, define the role, then tune the interview focus.
           </p>

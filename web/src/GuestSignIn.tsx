@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react";
 
+import studyingIllustration from "./assets/blush/studying.png";
+import { CheckIcon } from "./icons";
 import { startGuestSession, type GuestSession } from "./guestSession";
 
 interface GuestSignInProps {
@@ -32,63 +34,106 @@ export function GuestSignIn({ onStarted, onCancel }: GuestSignInProps) {
   }
 
   return (
-    <section className="card auth-card" aria-labelledby="guest-title">
-      <div className="topbar__brand auth-card__brand">
-        <div className="topbar__brand-mark" aria-hidden="true">
-          R
+    <section className="guest-access" aria-labelledby="guest-title">
+      <div className="guest-access__story">
+        <div className="guest-access__brand">
+          <span className="guest-access__brand-mark" aria-hidden="true">
+            <span />
+          </span>
+          <span>
+            <strong>Rocky</strong>
+            <small>Your interview practice copilot</small>
+          </span>
         </div>
-        <span>Rocky</span>
-      </div>
-      <p className="section__eyebrow">Guest access</p>
-      <h1 id="guest-title">Tell us who you are</h1>
-      <p className="section__lede">
-        No account needed. Your name and email keep your practice sessions
-        together, so you can come back to them with the same address.
-      </p>
-      <form className="guest-form" onSubmit={submit}>
-        <label className="field">
-          <span>Your name</span>
-          <input
-            className="input"
-            type="text"
-            value={fullName}
-            required
-            maxLength={160}
-            autoComplete="name"
-            placeholder="Alex Kumar"
-            onChange={(event) => setFullName(event.target.value)}
-          />
-        </label>
-        <label className="field">
-          <span>Email</span>
-          <input
-            className="input"
-            type="email"
-            value={email}
-            required
-            autoComplete="email"
-            placeholder="alex@example.com"
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        </label>
-        {error ? (
-          <p className="preflight-warning" role="alert">
-            {error}
+
+        <div className="guest-access__story-copy">
+          <p className="section__eyebrow">Private by design</p>
+          <h2>Bring the role. Rocky brings the rehearsal plan.</h2>
+          <p>
+            Turn your résumé and job description into focused interview
+            practice, then leave with feedback you can use immediately.
           </p>
-        ) : null}
-        <button
-          className="btn btn--primary"
-          type="submit"
-          disabled={working || !fullName.trim() || !email.trim()}
-        >
-          {working ? "Starting…" : "Start practising"}
-        </button>
-        {onCancel ? (
-          <button className="btn btn--ghost" type="button" onClick={onCancel}>
-            Sign in instead
+          <ul className="guest-access__trust">
+            <li>
+              <CheckIcon size={16} /> No account or password required
+            </li>
+            <li>
+              <CheckIcon size={16} /> Your sessions stay linked to this email
+            </li>
+            <li>
+              <CheckIcon size={16} /> You control camera and microphone access
+            </li>
+          </ul>
+        </div>
+
+        <div className="guest-access__art">
+          <img
+            src={studyingIllustration}
+            alt="A candidate preparing for an interview at home"
+          />
+        </div>
+      </div>
+
+      <div className="guest-access__form-panel">
+        <p className="section__eyebrow">Guest access</p>
+        <h1 id="guest-title">Tell us who you are</h1>
+        <p className="guest-access__lede">
+          No password. Your name and email reconnect you with the same Rocky
+          workspace when you return.
+        </p>
+        <form className="guest-form" onSubmit={submit}>
+          <label className="field">
+            <span className="field__label">Your name</span>
+            <input
+              className="input"
+              type="text"
+              value={fullName}
+              required
+              maxLength={160}
+              autoComplete="name"
+              placeholder="Alex Kumar"
+              onChange={(event) => setFullName(event.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span className="field__label">Email</span>
+            <input
+              className="input"
+              type="email"
+              value={email}
+              required
+              autoComplete="email"
+              placeholder="alex@example.com"
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </label>
+          {error ? (
+            <p className="preflight-warning" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <button
+            className="btn btn--primary guest-access__submit"
+            type="submit"
+            disabled={working || !fullName.trim() || !email.trim()}
+          >
+            <span>{working ? "Starting…" : "Start practising"}</span>
+            <span aria-hidden="true">→</span>
           </button>
-        ) : null}
-      </form>
+          <p className="guest-access__privacy">
+            Your email is used to reconnect this guest workspace.
+          </p>
+          {onCancel ? (
+            <button
+              className="btn btn--ghost"
+              type="button"
+              onClick={onCancel}
+            >
+              Sign in instead
+            </button>
+          ) : null}
+        </form>
+      </div>
     </section>
   );
 }

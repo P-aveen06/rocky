@@ -240,7 +240,7 @@ export function ReportPage({
 
   if (interview.status === "FAILED_RECOVERABLE") {
     return (
-      <main className="canvas report-canvas">
+      <main className="canvas report-canvas report-canvas--processing">
         <button
           className="btn btn--ghost back-button"
           type="button"
@@ -278,7 +278,7 @@ export function ReportPage({
   if (PROCESSING_STATES.has(interview.status)) {
     const copy = processingCopy(interview.status);
     return (
-      <main className="canvas report-canvas">
+      <main className="canvas report-canvas report-canvas--processing">
         <button
           className="btn btn--ghost back-button"
           type="button"

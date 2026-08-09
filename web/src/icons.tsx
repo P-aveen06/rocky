@@ -98,6 +98,15 @@ export function LogOutIcon({ size = 16 }: IconProps) {
   );
 }
 
+export function EditIcon({ size = 16 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...common}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
 export function ArrowLeftIcon({ size = 20 }: IconProps) {
   return (
     <svg width={size} height={size} {...common}>
