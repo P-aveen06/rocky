@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.14"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      # test_react_build_is_served_from_fastapi asserts that FastAPI serves the
+      # real Vite output, which is how the app is deployed, so web/dist has to
+      # exist before pytest runs.
+      - run: npm ci && npm run build
+        working-directory: web
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m ruff format --check api domain evals migrations prompts scripts tests
+      - run: python -m ruff check api domain evals migrations prompts scripts tests
+      - run: python -m pytest tests
+      - name: Audit Python dependencies
+        run: python -m pip_audit --progress-spinner=off
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.14"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
+      - name: Audit JavaScript dependencies
+        run: npm audit --audit-level=high
