@@ -1,0 +1,10 @@
+graph TD
+  B["Browser · React + TypeScript"]
+  A["FastAPI · API + built SPA"]
+  D["PostgreSQL"]
+  Z["Azure OpenAI"]
+  B -->|"/api"| A
+  A -->|"client secret"| B
+  A --> D
+  B -->|"WebRTC audio"| Z
+  A -->|"transcription"| Z
