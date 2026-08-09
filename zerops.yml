@@ -68,6 +68,10 @@ zerops:
         APP_ENV: production
         AUTH_MODE: clerk
         AUTO_CREATE_SCHEMA: false
+        # Zerops generates this credential on the managed `db` service. The
+        # explicit reference shares only this value with the otherwise-isolated
+        # application service. Port 5432 stays on the project's private network.
+        DATABASE_URL: ${db_connectionString}
         WEB_DIST_DIR: /var/www/web/dist
         ENABLE_TEXT_DEV_MODE: false
         # Same value the client was built with, for the reason above.

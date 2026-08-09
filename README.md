@@ -6,8 +6,8 @@ browser Realtime interviews with a quiet-room text mode, evidence-backed
 reports, optional speaking-delivery coaching, and private-alpha quota,
 retention, deletion, and usage controls.
 
-It deploys to [Zerops](https://docs.zerops.io/) as a single service, with
-PostgreSQL on Supabase and sign-in through Clerk.
+It deploys to [Zerops](https://docs.zerops.io/) with a managed PostgreSQL
+service on the project's private network and sign-in through Clerk.
 
 ## Repository layout
 
@@ -16,7 +16,9 @@ server/       FastAPI application, domain contracts, migrations, and tests
 web/          React + TypeScript dashboard and Vite build
 zerops.yml    Build and deploy pipeline
 zerops-import.yml
-              One-time Zerops infrastructure definition
+              One-time Zerops project definition (application + PostgreSQL)
+zerops-db-import.yml
+              Adds PostgreSQL to an existing Zerops project
 ```
 
 Working notes, specs, plans, and the preserved M0 desktop prototype live in
@@ -200,11 +202,12 @@ a session and refresh to confirm that it persists in Neon.
 
 SQLite remains the default zero-setup option for local work.
 
-### Use Supabase PostgreSQL
+### Use Supabase PostgreSQL locally (optional)
 
-Supabase is the deployed database. In the Supabase dashboard open **Project
-Settings → Database → Connection string → URI** and copy the **session pooler**
-URL, which looks like:
+Production uses PostgreSQL inside Zerops. Supabase remains supported as an
+optional database for local development or data export. In the Supabase
+dashboard open **Project Settings → Database → Connection string → URI** and
+copy the **session pooler** URL, which looks like:
 
 ```text
 postgresql://postgres.PROJECTREF:PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres
@@ -303,15 +306,64 @@ including `challenges.cloudflare.com` for Clerk's bot protection widget.
 
 ## Deployment (Zerops)
 
-One-time setup:
+For a new project, the one-time import creates both `app` and a PostgreSQL 17
+service named `db`:
 
 ```bash
 zcli login
 zcli project project-import zerops-import.yml
 ```
 
-Then set the real secrets in the Zerops GUI under **Service → Environment
-variables** — `zerops-import.yml` ships placeholders on purpose.
+For an existing Rocky project that currently uses Supabase, add only the
+database service:
+
+```bash
+zcli project service-import zerops-db-import.yml
+```
+
+The runtime maps `DATABASE_URL` to Zerops's generated
+`${db_connectionString}`. The app connects directly to `db:5432` on the
+project's private network; no public database IP or committed password is
+needed. Then set the remaining real secrets in the Zerops GUI under
+**Service → Environment variables** — the import file ships placeholders on
+purpose.
+
+### Move existing Supabase data
+
+Skip this section when the existing rows are disposable: the first app deploy
+runs `alembic upgrade head` and creates a clean schema automatically.
+
+To preserve the data, stop writes to the Supabase-backed app, use a `pg_dump`
+client at least as new as the Supabase PostgreSQL server, and export only the
+application-owned `public` schema. Keep both connection URLs out of shell
+history and source control.
+
+```bash
+pg_dump "$SOURCE_DATABASE_URL" \
+  --format=custom \
+  --schema=public \
+  --no-owner \
+  --no-acl \
+  --file=/tmp/rocky-public.dump
+```
+
+Start the Zerops VPN, copy the internal connection URL from the `db` service's
+**Peek access details**, and restore the dump before deploying the application:
+
+```bash
+pg_restore \
+  --dbname="$ZEROPS_DATABASE_URL" \
+  --clean \
+  --if-exists \
+  --no-owner \
+  --no-acl \
+  /tmp/rocky-public.dump
+```
+
+The dump includes `alembic_version`, so the deploy-time migration advances only
+revisions that were not already present. After deployment, verify
+`/api/health/ready`, sign in, and confirm that an existing interview and report
+can be opened before removing or pausing the Supabase project.
 
 Repeat deploys run from [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
 on every push to `main`. It needs:

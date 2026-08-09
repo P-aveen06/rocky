@@ -1,0 +1,8 @@
+# Add the managed database to an existing Rocky project with:
+#   zcli project service-import zerops-db-import.yml
+#
+# Fresh projects should use zerops-import.yml, which creates both services.
+services:
+  - hostname: db
+    type: postgresql:single@17
+    profile: oltp-hobby
