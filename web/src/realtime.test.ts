@@ -158,3 +158,50 @@ describe("voice transcription transport", () => {
     expect(stopVideo).not.toHaveBeenCalled();
   });
 });
+
+describe("interviewer time cues", () => {
+  function transportWithChannel(readyState: string) {
+    const transport = new RealtimeTransport({
+      onEvent: vi.fn(),
+      onError: vi.fn(),
+      onStateChange: vi.fn(),
+      onReady: vi.fn(),
+    });
+    const send = vi.fn();
+    (transport as unknown as { channel: unknown }).channel = {
+      readyState,
+      send,
+    };
+    return { transport, send };
+  }
+
+  it("delivers a cue as a system item so it never becomes candidate evidence", () => {
+    const { transport, send } = transportWithChannel("open");
+
+    transport.sendTimeCue("TIME_REMAINING: about 30 seconds left.");
+
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(send.mock.calls[0][0] as string)).toEqual({
+      type: "conversation.item.create",
+      item: {
+        type: "message",
+        role: "system",
+        content: [
+          {
+            type: "input_text",
+            text: "TIME_REMAINING: about 30 seconds left.",
+          },
+        ],
+      },
+    });
+  });
+
+  it("drops a cue rather than throwing when the channel is not open", () => {
+    const { transport, send } = transportWithChannel("connecting");
+
+    expect(() =>
+      transport.sendTimeCue("TIME_REMAINING: wrap up."),
+    ).not.toThrow();
+    expect(send).not.toHaveBeenCalled();
+  });
+});

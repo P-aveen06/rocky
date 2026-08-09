@@ -40,6 +40,7 @@ import type {
   InterviewTurn,
   InterviewTurnInput,
   InterviewType,
+  RealtimeTimeCue,
   SpeechSegmentInput,
 } from "./types";
 import {
@@ -113,6 +114,27 @@ function randomTurnId(prefix: string): string {
   return `${prefix}_${crypto.randomUUID().replaceAll("-", "")}`;
 }
 
+/**
+ * A candidate answer that is on screen before the server has stored it.
+ *
+ * The interviewer's words stream in token by token, but the candidate's go
+ * through two transcription passes before the saved turn comes back, which
+ * left the answer invisible for seconds while the interviewer was already
+ * replying to it. This is the optimistic stand-in, replaced by the real turn
+ * the moment it lands.
+ */
+interface LiveCandidate {
+  itemId: string;
+  text: string;
+  status: "listening" | "transcribing" | "transcribed";
+}
+
+const LIVE_CANDIDATE_LABEL: Record<LiveCandidate["status"], string> = {
+  listening: "Listening…",
+  transcribing: "Transcribing your answer…",
+  transcribed: "Saving…",
+};
+
 export function PracticePage({
   interview,
   onBack,
@@ -137,6 +159,7 @@ export function PracticePage({
   const [deliveryConsent, setDeliveryConsent] = useState(false);
   const [videoConsent, setVideoConsent] = useState(false);
   const [videoActive, setVideoActive] = useState(false);
+  const [offFrame, setOffFrame] = useState(false);
   const [videoSupported] = useState(isVideoCaptureSupported);
   const selfViewRef = useRef<HTMLVideoElement | null>(null);
   const videoRecorderRef = useRef<VideoDeliveryRecorder | null>(null);
@@ -147,6 +170,7 @@ export function PracticePage({
   const [answerError, setAnswerError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [liveAssistant, setLiveAssistant] = useState("");
+  const [liveCandidates, setLiveCandidates] = useState<LiveCandidate[]>([]);
   const [finalizing, setFinalizing] = useState(false);
   const [interviewEnded, setInterviewEnded] = useState(false);
   const [liveFallbackCount, setLiveFallbackCount] = useState(0);
@@ -173,6 +197,8 @@ export function PracticePage({
   const recorderStreamRef = useRef<MediaStream | null>(null);
   const coordinatorRef = useRef<TurnTranscriptionCoordinator | null>(null);
   const retainedAssistantRef = useRef<InterviewTurnInput[]>([]);
+  const timeCuesRef = useRef<RealtimeTimeCue[]>([]);
+  const firedTimeCuesRef = useRef(new Set<number>());
 
   useEffect(() => {
     let active = true;
@@ -211,7 +237,19 @@ export function PracticePage({
   useEffect(() => {
     const stream = transcriptStreamRef.current;
     if (stream) stream.scrollTop = stream.scrollHeight;
-  }, [liveAssistant, runtime?.turns]);
+  }, [liveAssistant, liveCandidates, runtime?.turns]);
+
+  /** Retire a placeholder as soon as the turn it stood in for is stored. */
+  useEffect(() => {
+    const stored = new Set(
+      (runtime?.turns ?? []).map((turn) => turn.client_turn_id),
+    );
+    if (stored.size === 0) return;
+    setLiveCandidates((current) => {
+      const next = current.filter((item) => !stored.has(item.itemId));
+      return next.length === current.length ? current : next;
+    });
+  }, [runtime?.turns]);
 
   useEffect(() => {
     if (!runtime?.ends_at || !runtime.server_now) return;
@@ -227,6 +265,19 @@ export function PracticePage({
         Math.ceil((remainingAtSync - (performance.now() - syncedAt)) / 1000),
       );
       setRemainingSeconds(seconds);
+      if (phase === "interview" && seconds > 0) {
+        // The interviewer has no clock. Replay each server-authored checkpoint
+        // once, as it is passed, so it can pace itself and close on time.
+        for (const cue of timeCuesRef.current) {
+          if (
+            seconds <= cue.at_seconds_remaining &&
+            !firedTimeCuesRef.current.has(cue.at_seconds_remaining)
+          ) {
+            firedTimeCuesRef.current.add(cue.at_seconds_remaining);
+            transportRef.current?.sendTimeCue(cue.text);
+          }
+        }
+      }
       if (
         seconds === 0 &&
         phase === "interview" &&
@@ -263,6 +314,24 @@ export function PracticePage({
     !transcriptionWarning &&
     (inputMode === "text_dev" || (microphoneConsent && microphoneReady));
   const transcript = runtime?.turns ?? [];
+
+  function upsertLiveCandidate(
+    itemId: string,
+    patch: Partial<Omit<LiveCandidate, "itemId">>,
+  ) {
+    setLiveCandidates((current) => {
+      const index = current.findIndex((item) => item.itemId === itemId);
+      if (index === -1) {
+        return [
+          ...current,
+          { itemId, text: "", status: "listening", ...patch },
+        ];
+      }
+      const next = [...current];
+      next[index] = { ...next[index], ...patch };
+      return next;
+    });
+  }
 
   async function playTestTone() {
     setError(null);
@@ -478,6 +547,9 @@ export function PracticePage({
   }
 
   function releaseMedia() {
+    // Nothing is arriving to reconcile these against once the transport is
+    // gone, so a leftover "Transcribing…" would sit there forever.
+    setLiveCandidates([]);
     recorderRef.current?.stop();
     recorderRef.current = null;
     recorderStreamRef.current = null;
@@ -498,6 +570,7 @@ export function PracticePage({
     }
     if (event.type === "input_audio_buffer.speech_started" && event.item_id) {
       recorderRef.current?.speechStarted(event.item_id);
+      upsertLiveCandidate(event.item_id, { status: "listening" });
       if (typeof event.audio_start_ms === "number") {
         speechStartsRef.current.set(event.item_id, event.audio_start_ms);
       }
@@ -505,6 +578,7 @@ export function PracticePage({
     }
     if (event.type === "input_audio_buffer.speech_stopped" && event.item_id) {
       recorderRef.current?.speechStopped(event.item_id);
+      upsertLiveCandidate(event.item_id, { status: "transcribing" });
       const startedAt = speechStartsRef.current.get(event.item_id);
       if (
         typeof event.audio_end_ms === "number" &&
@@ -528,6 +602,9 @@ export function PracticePage({
       event.type === "conversation.item.input_audio_transcription.failed" &&
       event.item_id
     ) {
+      // The live pass failed, but the higher-quality one is still running.
+      // Keep the placeholder honest rather than leaving it on "Listening".
+      upsertLiveCandidate(event.item_id, { status: "transcribing" });
       coordinatorRef.current?.liveFailed(event.item_id);
       return;
     }
@@ -560,6 +637,14 @@ export function PracticePage({
       event.transcript?.trim()
     ) {
       const clientTurnId = event.item_id ?? randomTurnId("voice");
+      // Show the answer the moment the words are known. The saved turn is
+      // still seconds away behind the second transcription pass, and until
+      // now that gap left the candidate watching the interviewer reply to
+      // something they could not see themselves having said.
+      upsertLiveCandidate(clientTurnId, {
+        text: event.transcript.trim(),
+        status: "transcribed",
+      });
       const coordinator = coordinatorRef.current;
       if (coordinator) {
         coordinator.liveCompleted(clientTurnId, event.transcript);
@@ -628,7 +713,12 @@ export function PracticePage({
         for (const track of stream.getTracks()) track.stop();
         return;
       }
-      const recorder = await VideoDeliveryRecorder.create(element, stream);
+      const recorder = await VideoDeliveryRecorder.create(
+        element,
+        stream,
+        {},
+        setOffFrame,
+      );
       recorder.start();
       videoRecorderRef.current = recorder;
       setVideoActive(true);
@@ -647,6 +737,7 @@ export function PracticePage({
     const recorder = videoRecorderRef.current;
     videoRecorderRef.current = null;
     setVideoActive(false);
+    setOffFrame(false);
     if (!recorder) return;
     const summary = recorder.stop();
     if (summary.sampleCount === 0) return;
@@ -701,6 +792,10 @@ export function PracticePage({
         duration,
         interviewType,
       );
+      // Reconnecting mints a fresh session that has never seen the earlier
+      // cues, so the already-passed ones are replayed rather than skipped.
+      timeCuesRef.current = secret.time_cues ?? [];
+      firedTimeCuesRef.current = new Set();
       const transport = new RealtimeTransport({
         onEvent: handleRealtimeEvent,
         onError: setError,
@@ -1207,6 +1302,23 @@ export function PracticePage({
                     ) : null}
                   </article>
                 ))}
+                {liveCandidates.map((candidate) => (
+                  <article
+                    className="transcript-turn is-user is-live"
+                    key={candidate.itemId}
+                  >
+                    <span>You</span>
+                    {candidate.text ? <p>{candidate.text}</p> : null}
+                    <small className="transcript-turn__pending">
+                      <span className="transcript-dots" aria-hidden="true">
+                        <i />
+                        <i />
+                        <i />
+                      </span>
+                      {LIVE_CANDIDATE_LABEL[candidate.status]}
+                    </small>
+                  </article>
+                ))}
                 {liveAssistant ? (
                   <article className="transcript-turn is-assistant is-live">
                     <span>Interviewer</span>
@@ -1300,6 +1412,11 @@ export function PracticePage({
                     muted
                     aria-label="Your camera preview"
                   />
+                  {videoActive && offFrame ? (
+                    <p className="self-view__alert" role="status">
+                      Your face is not visible. Move back into frame.
+                    </p>
+                  ) : null}
                   {videoActive ? (
                     <p className="self-view__note">
                       Camera on. Tracking runs on this device and nothing is

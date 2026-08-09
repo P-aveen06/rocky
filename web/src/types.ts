@@ -120,12 +120,18 @@ export interface SpeechSegmentInput {
 
 export type DeliveryCoaching = DeliveryConsent;
 
+export interface RealtimeTimeCue {
+  at_seconds_remaining: number;
+  text: string;
+}
+
 export interface RealtimeClientSecret {
   client_secret: string;
   expires_at: number;
   calls_url: string;
   input_mode: InputMode;
   prompt_version: string;
+  time_cues?: RealtimeTimeCue[];
 }
 
 export interface InterviewTurn {

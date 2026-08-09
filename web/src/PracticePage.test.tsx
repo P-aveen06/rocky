@@ -531,8 +531,12 @@ describe("Realtime practice room", () => {
 
     const duration = await screen.findByRole("combobox", { name: "Duration" });
     expect(duration).toHaveDisplayValue("15 minutes");
-    expect(screen.getByRole("option", { name: "2 minutes" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "5 minutes" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "2 minutes" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "5 minutes" }),
+    ).toBeInTheDocument();
   });
 
   it("offers separate opt-in consent only for voice delivery coaching", async () => {
@@ -759,6 +763,98 @@ describe("Dual transcription capture", () => {
     expect(
       mocks.timeline.filter((entry) => entry === "POST /turns:batch"),
     ).toHaveLength(0);
+  });
+
+  it("shows the candidate's answer before the saved turn comes back", async () => {
+    installFetch();
+    installMedia();
+
+    renderPage({});
+    const peer = await startVoiceInterview();
+
+    // While speaking, the answer is acknowledged on screen even though there
+    // is nothing to show yet.
+    await deliver(peer, {
+      type: "input_audio_buffer.speech_started",
+      item_id: "item_7",
+      audio_start_ms: 1000,
+    });
+    expect(await screen.findByText("Listening…")).toBeInTheDocument();
+
+    await deliver(peer, {
+      type: "input_audio_buffer.speech_stopped",
+      item_id: "item_7",
+      audio_end_ms: 4000,
+    });
+    expect(
+      await screen.findByText("Transcribing your answer…"),
+    ).toBeInTheDocument();
+
+    // The words land long before the second transcription pass stores them.
+    await deliver(peer, {
+      type: "conversation.item.input_audio_transcription.completed",
+      item_id: "item_7",
+      transcript: "I built a FastAPI service.",
+    });
+    expect(
+      await screen.findByText("I built a FastAPI service."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Saving…")).toBeInTheDocument();
+  });
+
+  it("retires the placeholder once the stored turn arrives", async () => {
+    installFetch();
+    installMedia();
+
+    renderPage({});
+    const peer = await startVoiceInterview();
+
+    await deliver(peer, {
+      type: "input_audio_buffer.speech_started",
+      item_id: "item_1",
+      audio_start_ms: 1000,
+    });
+    await deliver(peer, {
+      type: "conversation.item.input_audio_transcription.completed",
+      item_id: "item_1",
+      transcript: "I built a FastAPI service.",
+    });
+    expect(screen.getByText("Saving…")).toBeInTheDocument();
+
+    act(() =>
+      mocks.coordinators[0].callbacks.onRuntime?.(
+        runtime({ turns: [userTurn({ client_turn_id: "item_1" })] }),
+      ),
+    );
+
+    // The real turn replaces the stand-in rather than doubling it up.
+    await waitFor(() =>
+      expect(screen.queryByText("Saving…")).not.toBeInTheDocument(),
+    );
+    expect(screen.getAllByText("I built a FastAPI service.")).toHaveLength(1);
+  });
+
+  it("keeps a placeholder up when the live transcription pass fails", async () => {
+    installFetch();
+    installMedia();
+
+    renderPage({});
+    const peer = await startVoiceInterview();
+
+    await deliver(peer, {
+      type: "input_audio_buffer.speech_started",
+      item_id: "item_9",
+      audio_start_ms: 1000,
+    });
+    await deliver(peer, {
+      type: "conversation.item.input_audio_transcription.failed",
+      item_id: "item_9",
+    });
+
+    // The slower pass is still running, so the answer is not silently dropped.
+    expect(
+      await screen.findByText("Transcribing your answer…"),
+    ).toBeInTheDocument();
   });
 
   it("hands recorded utterances to the coordinator", async () => {

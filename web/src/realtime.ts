@@ -208,6 +208,33 @@ export class RealtimeTransport {
     this.send({ type: "response.create" });
   }
 
+  /**
+   * Hand the interviewer a clock reading.
+   *
+   * The model has no timer, so pacing and wrap-up come from here. The wording
+   * is server-owned and arrives with the client secret; this only decides
+   * when it is delivered. Sent as a system item so it steers the interviewer
+   * without appearing as something the candidate said -- a user item would be
+   * transcribed into the evidence the report is built from.
+   *
+   * A cue is advisory. If the channel rejects it the interview continues on
+   * the pacing guidance already baked into the prompt.
+   */
+  sendTimeCue(text: string): void {
+    try {
+      this.send({
+        type: "conversation.item.create",
+        item: {
+          type: "message",
+          role: "system",
+          content: [{ type: "input_text", text }],
+        },
+      });
+    } catch {
+      // Losing a pacing hint is not worth interrupting the interview over.
+    }
+  }
+
   setMicrophoneEnabled(enabled: boolean): void {
     for (const sender of this.peer?.getSenders() ?? []) {
       if (sender.track?.kind === "audio") sender.track.enabled = enabled;

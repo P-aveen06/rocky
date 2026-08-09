@@ -918,7 +918,7 @@ textarea {
   position: absolute;
   right: var(--space-6);
   bottom: 0;
-  width: min(36%, 300px);
+  width: min(30%, 250px);
   max-height: 220px;
   object-fit: contain;
   object-position: center bottom;
@@ -931,9 +931,14 @@ textarea {
 }
 
 .report-processing > p,
-.report-processing > h1,
-.report-processing__steps {
+.report-processing > h1 {
   max-width: 62%;
+}
+
+/* The pills need more room than the prose to stay on one line each, but must
+   still stop short of the illustration anchored bottom-right. */
+.report-processing__steps {
+  max-width: 74%;
 }
 
 .report-canvas {

@@ -175,6 +175,42 @@ export function summarizeVideoSamples(
   };
 }
 
+/**
+ * Decides when a dropout has lasted long enough to warn the candidate about.
+ *
+ * Split out from the recorder so the rule that puts a warning on screen can be
+ * tested without a camera or a face model. Uses the same tolerance as the
+ * summary above, so what someone is told live matches what the report counts.
+ *
+ * Edge-triggered on purpose: `onChange` fires when the state flips, not on
+ * every frame, so the banner does not thrash while tracking is marginal.
+ */
+export class OffFrameTracker {
+  private absentSince: number | null = null;
+  private offFrame = false;
+
+  constructor(
+    private readonly onChange: (offFrame: boolean) => void,
+    private readonly toleranceMs: number = DEFAULT_OFF_FRAME_TOLERANCE_MS,
+  ) {}
+
+  observe(facePresent: boolean, timestampMs: number): void {
+    if (facePresent) {
+      this.absentSince = null;
+      if (this.offFrame) {
+        this.offFrame = false;
+        this.onChange(false);
+      }
+      return;
+    }
+    this.absentSince ??= timestampMs;
+    if (!this.offFrame && timestampMs - this.absentSince >= this.toleranceMs) {
+      this.offFrame = true;
+      this.onChange(true);
+    }
+  }
+}
+
 /** The API stores these snake-cased; the report reads them back through here. */
 export function fromVideoSummaryPayload(payload: {
   sample_count: number;

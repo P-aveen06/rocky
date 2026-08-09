@@ -13,6 +13,7 @@ import type { FaceLandmarker } from "@mediapipe/tasks-vision";
 
 import {
   headPoseFromMatrix,
+  OffFrameTracker,
   summarizeVideoSamples,
   type SummaryOptions,
   type VideoDeliverySummary,
@@ -111,24 +112,50 @@ export class VideoDeliveryRecorder {
   private timer: ReturnType<typeof setInterval> | null = null;
   private readonly samples: VideoFrameSample[] = [];
   private startedAt = 0;
+  private readonly presence: OffFrameTracker | null;
 
   private constructor(
     private readonly video: HTMLVideoElement,
     private readonly landmarker: FaceLandmarker,
     readonly stream: MediaStream,
     private readonly summaryOptions: SummaryOptions,
-  ) {}
+    onOffFrameChange?: (offFrame: boolean) => void,
+  ) {
+    this.presence = onOffFrameChange
+      ? new OffFrameTracker(
+          onOffFrameChange,
+          summaryOptions.offFrameToleranceMs,
+        )
+      : null;
+  }
 
   static async create(
     video: HTMLVideoElement,
     stream: MediaStream,
     summaryOptions: SummaryOptions = {},
+    onOffFrameChange?: (offFrame: boolean) => void,
   ): Promise<VideoDeliveryRecorder> {
     const landmarker = await createLandmarker();
     video.srcObject = stream;
     video.muted = true;
     await video.play().catch(() => undefined);
-    return new VideoDeliveryRecorder(video, landmarker, stream, summaryOptions);
+    return new VideoDeliveryRecorder(
+      video,
+      landmarker,
+      stream,
+      summaryOptions,
+      onOffFrameChange,
+    );
+  }
+
+  /**
+   * Warn the candidate while they are out of shot.
+   *
+   * Nothing here reaches the interviewer: it cannot see the candidate, and
+   * delivery signals must never reach the role-fit score.
+   */
+  private trackPresence(present: boolean, timestampMs: number): void {
+    this.presence?.observe(present, timestampMs);
   }
 
   start(): void {
@@ -148,6 +175,7 @@ export class VideoDeliveryRecorder {
     };
     if (this.video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
       this.samples.push(absent);
+      this.trackPresence(false, timestampMs);
       return;
     }
     try {
@@ -160,6 +188,7 @@ export class VideoDeliveryRecorder {
       const pose = matrix ? headPoseFromMatrix(Array.from(matrix)) : null;
       if (!pose || !nose) {
         this.samples.push(absent);
+        this.trackPresence(false, timestampMs);
         return;
       }
       this.samples.push({
@@ -169,9 +198,11 @@ export class VideoDeliveryRecorder {
         noseX: nose.x,
         noseY: nose.y,
       });
+      this.trackPresence(true, timestampMs);
     } catch {
       // A single failed frame is not worth ending the interview over.
       this.samples.push(absent);
+      this.trackPresence(false, timestampMs);
     }
   }
 

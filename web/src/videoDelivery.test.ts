@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   headPoseFromMatrix,
+  OffFrameTracker,
   summarizeVideoSamples,
   videoDeliveryObservations,
   type VideoFrameSample,
@@ -185,5 +186,45 @@ describe("videoDeliveryObservations", () => {
     expect(observations.join(" ")).not.toMatch(
       /nervous|anxious|confident|stressed|honest|uncomfortable/i,
     );
+  });
+});
+
+describe("live off-frame warning", () => {
+  it("ignores dropouts shorter than the tolerance", () => {
+    const changes: boolean[] = [];
+    const tracker = new OffFrameTracker((value) => changes.push(value), 1500);
+
+    tracker.observe(true, 0);
+    tracker.observe(false, 200);
+    tracker.observe(false, 1000);
+    tracker.observe(true, 1200);
+
+    expect(changes).toEqual([]);
+  });
+
+  it("warns once the candidate has been out of shot past the tolerance", () => {
+    const changes: boolean[] = [];
+    const tracker = new OffFrameTracker((value) => changes.push(value), 1500);
+
+    tracker.observe(true, 0);
+    tracker.observe(false, 200);
+    tracker.observe(false, 1400);
+    tracker.observe(false, 1700);
+    tracker.observe(false, 2000);
+
+    expect(changes).toEqual([true]);
+  });
+
+  it("clears the warning when the candidate comes back into shot", () => {
+    const changes: boolean[] = [];
+    const tracker = new OffFrameTracker((value) => changes.push(value), 1500);
+
+    tracker.observe(false, 0);
+    tracker.observe(false, 1600);
+    tracker.observe(true, 1800);
+    tracker.observe(false, 2000);
+    tracker.observe(false, 3600);
+
+    expect(changes).toEqual([true, false, true]);
   });
 });

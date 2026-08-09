@@ -1607,11 +1607,15 @@ h3 {
   align-items: center;
 }
 
+/* The audio checks are two short rows; the session column carries the mode,
+   duration, type, three consent cards and the start button. Weighting it the
+   wider of the two stops that side wrapping into a tall narrow strip beside a
+   mostly empty card. */
 .preflight-grid {
   display: grid;
-  grid-template-columns: minmax(var(--space-0), 1.45fr) minmax(
+  grid-template-columns: minmax(var(--space-0), 1fr) minmax(
       calc(var(--space-9) * 4),
-      0.75fr
+      1.15fr
     );
   gap: var(--space-4);
   width: 100%;
@@ -1934,6 +1938,55 @@ h3 {
   margin-left: var(--space-1);
   background: var(--color-accent);
   animation: pulse 1s ease-in-out infinite;
+}
+
+/* The candidate's own words are already complete when they appear, so they get
+   no typing caret -- only the pending label below, until the turn is stored. */
+.transcript-turn.is-user.is-live p::after {
+  content: none;
+}
+
+/* Outranks the `.transcript-turn > small` block rule above. */
+.transcript-turn > small.transcript-turn__pending {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  margin-bottom: 0;
+  justify-content: flex-end;
+  font-weight: 500;
+}
+
+.transcript-dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.transcript-dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  animation: transcript-dot 1.2s ease-in-out infinite;
+}
+
+.transcript-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.transcript-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes transcript-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+  }
+  30% {
+    opacity: 1;
+  }
 }
 
 .answer-panel {
@@ -2543,19 +2596,25 @@ h3 {
 
 .report-processing__steps {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-5);
 }
 
+/* Each pill is a single status, so it reads as one line. Left to shrink it
+   broke "Interview complete" across two lines inside a cramped pill; the row
+   wraps instead when there is not enough width for all three. */
 .report-processing__steps span {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-pill);
   color: var(--color-text-muted);
   background: var(--color-sunken);
   font-size: var(--text-xs);
+  white-space: nowrap;
 }
 
 .report-processing__steps .is-complete {
@@ -2919,6 +2978,20 @@ h3 {
 .self-view__note {
   margin-top: var(--space-2);
   color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+/*
+ * Shown while the candidate is out of shot. Deliberately quiet: it appears
+ * mid-answer, and a loud alert would derail the thing it is trying to help.
+ */
+.self-view__alert {
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
   font-size: var(--text-xs);
   text-align: center;
 }
