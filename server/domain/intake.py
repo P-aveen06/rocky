@@ -52,7 +52,7 @@ class ScorecardCompetency(BaseModel):
 
 class ScorecardDocument(BaseModel):
     competencies: list[ScorecardCompetency] = Field(min_length=2, max_length=10)
-    generator_version: str = "backend-template-v1"
+    generator_version: str = "role-neutral-fallback-v1"
 
     @model_validator(mode="after")
     def weights_total_one_hundred(self) -> ScorecardDocument:

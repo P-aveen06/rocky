@@ -564,7 +564,7 @@ def test_m2_resume_profile_jd_and_editable_scorecard_flow(client: TestClient) ->
     assert sum(item["weight"] for item in scorecard_body["competencies"]) == 100
     assert all(item["source_references"] for item in scorecard_body["competencies"])
     assert (
-        "Shapes system boundaries"
+        "Sets direction and standards"
         in scorecard_body["competencies"][0]["seniority_expectation"]
     )
 
@@ -1895,9 +1895,14 @@ def test_m3_text_realtime_flow_is_private_long_and_idempotent(
             "calls_url",
             "input_mode",
             "prompt_version",
+            "time_cues",
         }
         assert "permanent-server-key" not in secret.text
         assert "server-owned" not in secret.text
+        # Pacing text is the only prompt content the client is given, and it
+        # must not carry the scorecard or the instructions with it.
+        cues = secret.json()["time_cues"]
+        assert cues and all(cue["text"].startswith("TIME_REMAINING:") for cue in cues)
         assert captured["input_mode"] == "text_dev"
         assert "TRUSTED_SESSION_CONTEXT_JSON" in captured["instructions"]
 

@@ -29,6 +29,7 @@ from prompts.interview_v1 import (
     PROMPT_VERSION,
     build_interview_prompt_from_snapshot,
     build_setup_snapshot,
+    build_time_cues,
     setup_fingerprint,
 )
 
@@ -52,6 +53,7 @@ from ..realtime_schemas import (
     InterviewTurnResponse,
     RealtimeClientSecretRequest,
     RealtimeClientSecretResponse,
+    RealtimeTimeCue,
     TranscriptionEventRequest,
 )
 from ..services.audio_multipart import (
@@ -432,6 +434,13 @@ async def realtime_client_secret(
         calls_url=secret.calls_url,
         input_mode=payload.input_mode,
         prompt_version=PROMPT_VERSION,
+        time_cues=[
+            RealtimeTimeCue(
+                at_seconds_remaining=int(cue["at_seconds_remaining"]),
+                text=str(cue["text"]),
+            )
+            for cue in build_time_cues(interview.duration_minutes)
+        ],
     )
     request.app.state.realtime_secret_cache[interview.id] = {
         "key": cache_key,

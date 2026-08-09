@@ -43,7 +43,11 @@ from ..models import (
     User,
 )
 from ..services.profile import ProfileExtractionError, extract_candidate_profile
-from ..services.scorecards import extract_job_requirements, generate_scorecard
+from ..services.scorecards import (
+    ScorecardGenerationError,
+    extract_job_requirements,
+    generate_scorecard,
+)
 from ..services.uploads import UploadValidationError, validate_and_extract
 
 logger = logging.getLogger(__name__)
@@ -344,6 +348,7 @@ async def create_job_target(
     "/api/scorecards/generate", response_model=ScorecardResponse, status_code=201
 )
 async def create_scorecard(
+    request: Request,
     payload: GenerateScorecardRequest,
     user: Annotated[User, Depends(get_current_user)],
     database: Annotated[AsyncSession, Depends(get_database_session)],
@@ -366,9 +371,16 @@ async def create_scorecard(
     )
     if target is None:
         raise HTTPException(status_code=404, detail="Job target was not found.")
-    requirements, document = generate_scorecard(
-        target.raw_description, target.seniority
-    )
+    settings: Settings = request.app.state.settings
+    try:
+        requirements, document = await generate_scorecard(
+            target.raw_description,
+            target.seniority,
+            title=target.title,
+            settings=settings,
+        )
+    except ScorecardGenerationError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     target.structured_requirements = [
         item.model_dump(mode="json") for item in requirements
     ]

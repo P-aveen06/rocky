@@ -21,12 +21,18 @@ class RealtimeClientSecretRequest(BaseModel):
     interview_type: InterviewType = "technical_behavioral"
 
 
+class RealtimeTimeCue(BaseModel):
+    at_seconds_remaining: int
+    text: str
+
+
 class RealtimeClientSecretResponse(BaseModel):
     client_secret: str
     expires_at: int
     calls_url: str
     input_mode: InputMode
     prompt_version: str
+    time_cues: list[RealtimeTimeCue] = []
 
 
 class ConnectionStateRequest(BaseModel):

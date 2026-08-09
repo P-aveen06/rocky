@@ -77,6 +77,7 @@ class Settings(BaseSettings):
     resume_max_docx_uncompressed_bytes: int = 20_000_000
     resume_extraction_timeout_seconds: float = 8.0
     profile_extraction_mode: Literal["auto", "rules", "llm"] = "auto"
+    scorecard_generation_mode: Literal["auto", "rules", "llm"] = "auto"
     azure_openai_endpoint: str | None = None
     azure_openai_api_key: SecretStr | None = None
     azure_openai_text_deployment: str = "gpt-5.6-luna"
@@ -94,6 +95,8 @@ class Settings(BaseSettings):
     azure_openai_final_transcription_max_bytes: int = 25_000_000
     resume_llm_timeout_seconds: float = 45.0
     resume_llm_max_input_characters: int = 80_000
+    scorecard_llm_timeout_seconds: float = 45.0
+    scorecard_llm_max_input_characters: int = 40_000
     evaluation_llm_timeout_seconds: float = 90.0
     evaluation_max_transcript_characters: int = 160_000
 
