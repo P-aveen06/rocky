@@ -123,7 +123,15 @@ async def evaluate_transcript(
             )
             logger.warning(
                 "evaluation_integrity_validation_failed",
-                extra={"attempt": attempt, "issue_count": len(last_issues)},
+                extra={
+                    "attempt": attempt,
+                    "issue_count": len(last_issues),
+                    # Issues name competency and turn identifiers only, never
+                    # transcript text, so they are safe to record. Without them
+                    # a rejected evaluation is indistinguishable from any other,
+                    # and the cause can only be guessed at.
+                    "issues": last_issues[:10],
+                },
             )
 
     raise EvaluationServiceError(
