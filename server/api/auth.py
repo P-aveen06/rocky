@@ -210,9 +210,13 @@ async def get_current_user(
             display_name=principal.display_name,
         )
         database.add(user)
-    else:
+        await database.commit()
+        await database.refresh(user)
+    elif user.email != principal.email or user.display_name != principal.display_name:
         user.email = principal.email
         user.display_name = principal.display_name
-    await database.commit()
-    await database.refresh(user)
+        await database.commit()
+    # Otherwise nothing changed, so no write. This dependency runs on every
+    # authenticated request, and committing plus refreshing unconditionally cost
+    # two database round trips each time for a row that almost never changes.
     return user

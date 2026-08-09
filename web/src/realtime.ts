@@ -179,10 +179,18 @@ export class RealtimeTransport {
     if (!response.ok) {
       throw new Error(`Realtime connection failed (${response.status}).`);
     }
-    await peer.setRemoteDescription({
-      type: "answer",
-      sdp: await response.text(),
-    });
+    const answerSdp = await response.text();
+    // Everything since createOffer has been a network round trip. If the
+    // interview was stopped, or the connection dropped, while it was in flight
+    // then this peer is already closed and setRemoteDescription throws
+    // "signalingState is 'closed'" -- an opaque DOM error the candidate cannot
+    // act on. Surface it as the retryable condition it actually is.
+    if (peer.signalingState === "closed") {
+      throw new Error(
+        "The Realtime connection closed before negotiation finished. Reconnect to retry this answer.",
+      );
+    }
+    await peer.setRemoteDescription({ type: "answer", sdp: answerSdp });
   }
 
   send(event: object): void {

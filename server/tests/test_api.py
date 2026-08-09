@@ -2234,6 +2234,47 @@ def test_unauthenticated_managed_request_has_error_id(tmp_path: Path) -> None:
     assert response.headers["X-Error-ID"] == response.json()["error"]["id"]
 
 
+def test_unchanged_identity_does_not_rewrite_the_user_row(tmp_path: Path) -> None:
+    """The auth dependency runs per request, so it must not write needlessly.
+
+    An unconditional commit and refresh cost two database round trips on every
+    authenticated call, which dominates request time when the database is not
+    local. Only a genuine change to the identity should touch the row.
+    """
+
+    database_path = tmp_path / "identity.db"
+    clerk_settings = _clerk_settings(
+        database_url=f"sqlite+aiosqlite:///{database_path}",
+        auto_create_schema=True,
+        web_dist_dir=tmp_path / "missing-dist",
+    )
+
+    def stored_row() -> tuple[str, str, str]:
+        with sqlite3.connect(database_path) as connection:
+            return connection.execute(
+                "select email, display_name, updated_at from users"
+            ).fetchone()
+
+    with TestClient(create_app(clerk_settings)) as clerk_client:
+        same = _principal_headers("user-steady", "steady@example.test")
+        assert clerk_client.get("/api/auth/me", headers=same).status_code == 200
+        after_first = stored_row()
+
+        time.sleep(0.01)
+        assert clerk_client.get("/api/auth/me", headers=same).status_code == 200
+        assert stored_row() == after_first, "an unchanged identity was rewritten"
+
+        # A real change must still be persisted.
+        time.sleep(0.01)
+        renamed = _principal_headers("user-steady", "renamed@example.test")
+        assert clerk_client.get("/api/auth/me", headers=renamed).status_code == 200
+
+    email, display_name, updated_at = stored_row()
+    assert email == "renamed@example.test"
+    assert display_name == "renamed"
+    assert updated_at != after_first[2]
+
+
 def test_clerk_ignores_a_session_cookie_without_a_bearer_header(
     tmp_path: Path,
 ) -> None:
