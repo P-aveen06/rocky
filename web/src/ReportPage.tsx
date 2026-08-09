@@ -383,6 +383,25 @@ export function ReportPage({
         </article>
       </section>
 
+      <section
+        className="card report-context"
+        aria-labelledby="report-context-title"
+      >
+        <div>
+          <p className="section__eyebrow">Interview context</p>
+          <h2 id="report-context-title">{report.target_role.title}</h2>
+          <p>
+            {report.target_role.seniority} role ·{" "}
+            {report.candidate_profile.headline}
+          </p>
+        </div>
+        <ul aria-label="Candidate profile highlights">
+          {report.candidate_profile.highlights.map((highlight) => (
+            <li key={highlight}>{highlight}</li>
+          ))}
+        </ul>
+      </section>
+
       <div className="report-layout">
         <section
           className="report-main"
@@ -555,6 +574,30 @@ export function ReportPage({
           </footer>
         </aside>
       </div>
+
+      <details className="card report-transcript">
+        <summary>
+          <span>
+            <strong>Full interview transcript</strong>
+            <small>Review every question and candidate answer.</small>
+          </span>
+          <span>{report.transcript.length} turns</span>
+        </summary>
+        <ol>
+          {report.transcript.map((turn) => (
+            <li
+              className={`report-transcript__turn report-transcript__turn--${turn.speaker}`}
+              key={turn.sequence}
+            >
+              <span>
+                {turn.speaker === "user" ? "Candidate" : "Interviewer"} · Turn{" "}
+                {turn.sequence}
+              </span>
+              <p>{turn.transcript}</p>
+            </li>
+          ))}
+        </ol>
+      </details>
 
       {report.delivery_coaching ? (
         <section

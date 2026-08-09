@@ -17,6 +17,7 @@ from ..config import Settings
 from ..database import get_database_session
 from ..models import User
 from ..schemas import UserResponse
+from ..services.worked_example import ensure_guest_worked_example
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -76,6 +77,7 @@ async def start_guest_session(
             subject=guest_subject(email), email=email, display_name=display_name
         ),
     )
+    await ensure_guest_worked_example(database, user)
     return GuestSessionResponse(
         token=token,
         expires_at=expires_at.isoformat(),

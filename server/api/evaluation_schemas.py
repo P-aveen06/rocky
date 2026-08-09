@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from domain.intake import RequirementClass
+from domain.intake import RequirementClass, Seniority
 
 from .delivery_schemas import DeliveryCoachingResponse
 
@@ -40,6 +40,22 @@ class PracticeExercise(BaseModel):
     success_criteria: list[str] = Field(min_length=1, max_length=6)
 
 
+class ReportCandidateProfile(BaseModel):
+    headline: str
+    highlights: list[str]
+
+
+class ReportTargetRole(BaseModel):
+    title: str
+    seniority: Seniority
+
+
+class ReportTranscriptTurn(BaseModel):
+    sequence: int = Field(ge=1)
+    speaker: Literal["user", "assistant"]
+    transcript: str
+
+
 class EvaluationStatusResponse(BaseModel):
     interview_id: str
     status: str
@@ -59,5 +75,8 @@ class InterviewReportResponse(BaseModel):
     gaps: list[str]
     practice_exercises: list[PracticeExercise]
     uncertainty: list[str]
+    candidate_profile: ReportCandidateProfile
+    target_role: ReportTargetRole
+    transcript: list[ReportTranscriptTurn]
     delivery_coaching: DeliveryCoachingResponse
     completed_at: datetime

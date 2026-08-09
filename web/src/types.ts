@@ -284,6 +284,22 @@ export interface PracticeExercise {
   success_criteria: string[];
 }
 
+export interface ReportCandidateProfile {
+  headline: string;
+  highlights: string[];
+}
+
+export interface ReportTargetRole {
+  title: string;
+  seniority: Seniority;
+}
+
+export interface ReportTranscriptTurn {
+  sequence: number;
+  speaker: "user" | "assistant";
+  transcript: string;
+}
+
 export interface InterviewReport {
   interview_id: string;
   status: "REPORT_READY";
@@ -298,6 +314,9 @@ export interface InterviewReport {
   gaps: string[];
   practice_exercises: PracticeExercise[];
   uncertainty: string[];
+  candidate_profile: ReportCandidateProfile;
+  target_role: ReportTargetRole;
+  transcript: ReportTranscriptTurn[];
   delivery_coaching?: DeliveryCoaching;
   completed_at: string;
 }

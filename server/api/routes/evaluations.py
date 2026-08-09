@@ -16,7 +16,10 @@ from ..evaluation_schemas import (
     EvaluationStatusResponse,
     InterviewReportResponse,
     PracticeExercise,
+    ReportCandidateProfile,
     ReportEvidence,
+    ReportTargetRole,
+    ReportTranscriptTurn,
 )
 from ..models import Evaluation, InterviewSession, InterviewTurn, UsageEvent, User
 from ..services.evaluation_jobs import run_evaluation_job
@@ -181,6 +184,9 @@ async def interview_report(
             )
         )
     overall = dict(evaluation.overall_result)
+    setup_snapshot = dict(interview.setup_snapshot or {})
+    profile_snapshot = dict(setup_snapshot.get("candidate_profile", {}))
+    target_snapshot = dict(setup_snapshot.get("target", {}))
     return InterviewReportResponse(
         interview_id=interview.id,
         status="REPORT_READY",
@@ -198,6 +204,26 @@ async def interview_report(
             for item in evaluation.practice_exercises
         ],
         uncertainty=_competency_names(evaluation.uncertainty, competency_lookup),
+        candidate_profile=ReportCandidateProfile(
+            headline=str(profile_snapshot.get("headline", "")),
+            highlights=[
+                str(dict(item).get("text", ""))
+                for item in profile_snapshot.get("evidence", [])
+                if str(dict(item).get("text", "")).strip()
+            ],
+        ),
+        target_role=ReportTargetRole(
+            title=str(target_snapshot.get("title", "")),
+            seniority=target_snapshot.get("seniority", "mid"),
+        ),
+        transcript=[
+            ReportTranscriptTurn(
+                sequence=turn.sequence,
+                speaker=turn.speaker,
+                transcript=turn.transcript,
+            )
+            for turn in turns
+        ],
         delivery_coaching=await load_delivery_coaching(database, interview),
         completed_at=evaluation.completed_at,
     )

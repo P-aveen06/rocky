@@ -38,6 +38,7 @@ from api.main import create_app
 from api.models import InterviewTurn
 from api.services.realtime import RealtimeClientSecret
 from api.services.transcription import FinalTranscription, TranscriptionServiceError
+from api.services.worked_example import WORKED_EXAMPLE_TITLE
 from domain.evaluation import (
     CompetencyEvaluation,
     EvaluationReport,
@@ -2283,7 +2284,133 @@ def test_guest_can_do_everything_a_signed_up_account_can(tmp_path: Path) -> None
         )
         assert created.status_code == 201
         listed = client.get("/api/interviews", headers=headers)
-        assert [item["title"] for item in listed.json()["items"]] == ["Guest practice"]
+        assert [item["title"] for item in listed.json()["items"]] == [
+            "Guest practice",
+            WORKED_EXAMPLE_TITLE,
+        ]
+
+
+def test_new_guest_receives_a_complete_evidence_backed_worked_example(
+    tmp_path: Path,
+) -> None:
+    settings = _guest_settings(tmp_path, "worked-example.db")
+    with TestClient(create_app(settings)) as client:
+        started = client.post(
+            "/api/auth/guest",
+            json={"full_name": "Dana", "email": "dana@example.com"},
+        )
+        headers = {"Authorization": f"Bearer {started.json()['token']}"}
+        interviews = client.get("/api/interviews", headers=headers).json()["items"]
+
+        assert len(interviews) == 1
+        example = interviews[0]
+        assert example["title"] == WORKED_EXAMPLE_TITLE
+        assert example["status"] == "REPORT_READY"
+
+        setup = client.get(
+            f"/api/interviews/{example['id']}/setup", headers=headers
+        ).json()
+        assert setup["profile"]["headline"].startswith("Senior backend engineer")
+        assert setup["job_target"]["title"] == "Senior Backend Engineer"
+        assert len(setup["scorecard"]["competencies"]) == 7
+        assert setup["scorecard"]["total_weight"] == 100
+
+        runtime = client.get(
+            f"/api/interviews/{example['id']}/runtime", headers=headers
+        ).json()
+        assert runtime["status"] == "REPORT_READY"
+        assert len(runtime["turns"]) == 12
+
+        response = client.get(
+            f"/api/interviews/{example['id']}/report", headers=headers
+        )
+        assert response.status_code == 200
+        report = response.json()
+        assert report["status"] == "REPORT_READY"
+        assert report["overall_score"] == 3.75
+        assert report["coverage_percentage"] == 100
+        assert len(report["competency_results"]) == 7
+        assert report["target_role"] == {
+            "title": "Senior Backend Engineer",
+            "seniority": "senior",
+        }
+        assert len(report["candidate_profile"]["highlights"]) == 5
+        assert len(report["transcript"]) == 12
+
+        transcript_by_id = {turn["id"]: turn["transcript"] for turn in runtime["turns"]}
+        for competency in report["competency_results"]:
+            for evidence in competency["evidence"]:
+                assert evidence["quote"] in transcript_by_id[evidence["turn_id"]]
+
+
+def test_worked_example_is_not_duplicated_or_recreated_after_deletion(
+    tmp_path: Path,
+) -> None:
+    settings = _guest_settings(tmp_path, "worked-example-idempotent.db")
+    with TestClient(create_app(settings)) as client:
+
+        def sign_in() -> dict[str, str]:
+            response = client.post(
+                "/api/auth/guest",
+                json={"full_name": "Dana", "email": "dana@example.com"},
+            )
+            assert response.status_code == 200
+            return {"Authorization": f"Bearer {response.json()['token']}"}
+
+        headers = sign_in()
+        first_items = client.get("/api/interviews", headers=headers).json()["items"]
+        assert len(first_items) == 1
+
+        returning_headers = sign_in()
+        returning_items = client.get(
+            "/api/interviews", headers=returning_headers
+        ).json()["items"]
+        assert [item["id"] for item in returning_items] == [first_items[0]["id"]]
+
+        deleted = client.request(
+            "DELETE",
+            f"/api/interviews/{first_items[0]['id']}",
+            headers=returning_headers,
+            json={"confirmation": "DELETE"},
+        )
+        assert deleted.status_code == 204
+        after_delete_headers = sign_in()
+        assert (
+            client.get("/api/interviews", headers=after_delete_headers).json()["items"]
+            == []
+        )
+
+
+def test_each_guest_owns_an_isolated_copy_of_the_worked_example(
+    tmp_path: Path,
+) -> None:
+    settings = _guest_settings(tmp_path, "worked-example-ownership.db")
+    with TestClient(create_app(settings)) as client:
+        first = client.post(
+            "/api/auth/guest",
+            json={"full_name": "Dana", "email": "dana@example.com"},
+        ).json()
+        second = client.post(
+            "/api/auth/guest",
+            json={"full_name": "Priya", "email": "priya@example.com"},
+        ).json()
+        first_headers = {"Authorization": f"Bearer {first['token']}"}
+        second_headers = {"Authorization": f"Bearer {second['token']}"}
+        first_example = client.get("/api/interviews", headers=first_headers).json()[
+            "items"
+        ][0]
+        second_example = client.get("/api/interviews", headers=second_headers).json()[
+            "items"
+        ][0]
+
+        assert first_example["id"] != second_example["id"]
+        assert (
+            client.get(
+                f"/api/interviews/{first_example['id']}/report",
+                headers=second_headers,
+            ).status_code
+            == 404
+        )
 
 
 def test_returning_guest_reopens_the_same_sessions(tmp_path: Path) -> None:
@@ -2307,11 +2434,14 @@ def test_returning_guest_reopens_the_same_sessions(tmp_path: Path) -> None:
         assert [
             item["title"]
             for item in client.get("/api/interviews", headers=again).json()["items"]
-        ] == ["Earlier work"]
+        ] == ["Earlier work", WORKED_EXAMPLE_TITLE]
 
         # A different address is a different person.
         other = sign_in("someone-else@example.com")
-        assert client.get("/api/interviews", headers=other).json()["items"] == []
+        assert [
+            item["title"]
+            for item in client.get("/api/interviews", headers=other).json()["items"]
+        ] == [WORKED_EXAMPLE_TITLE]
 
 
 def test_guest_token_outranks_the_local_developer_identity(tmp_path: Path) -> None:
@@ -2337,7 +2467,10 @@ def test_guest_token_outranks_the_local_developer_identity(tmp_path: Path) -> No
         identity = client.get("/api/auth/me", headers=headers)
         assert identity.json()["display_name"] == "Priya"
         assert identity.json()["email"] == "priya@example.com"
-        assert client.get("/api/interviews", headers=headers).json()["items"] == []
+        assert [
+            item["title"]
+            for item in client.get("/api/interviews", headers=headers).json()["items"]
+        ] == [WORKED_EXAMPLE_TITLE]
 
         # And with no token the local developer still sees their own.
         assert [

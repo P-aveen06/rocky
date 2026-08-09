@@ -79,6 +79,29 @@ const report: InterviewReport = {
     },
   ],
   uncertainty: ["Operational ownership was not assessed."],
+  candidate_profile: {
+    headline: "Backend engineer focused on reliable payment systems",
+    highlights: [
+      "Built idempotent payment APIs.",
+      "Operated services in production.",
+    ],
+  },
+  target_role: {
+    title: "Backend Engineer",
+    seniority: "senior",
+  },
+  transcript: [
+    {
+      sequence: 1,
+      speaker: "assistant",
+      transcript: "How did you make the payment endpoint safe to retry?",
+    },
+    {
+      sequence: 2,
+      speaker: "user",
+      transcript: "I used idempotency keys and bounded retries.",
+    },
+  ],
   delivery_coaching: {
     interview_id: readyInterview.id,
     status: "available",
@@ -163,8 +186,8 @@ describe("evidence report", () => {
 
     await userEvent.click(screen.getByText("View 1 transcript excerpt"));
     expect(
-      screen.getByText(/I used idempotency keys and bounded retries/),
-    ).toBeInTheDocument();
+      screen.getAllByText(/I used idempotency keys and bounded retries/),
+    ).toHaveLength(2);
     expect(
       screen.getByRole("heading", {
         name: "Design an idempotent payment endpoint",
@@ -176,6 +199,11 @@ describe("evidence report", () => {
         headers: expect.objectContaining({ Accept: "application/json" }),
       }),
     );
+    expect(screen.getByText("Backend Engineer")).toBeInTheDocument();
+    expect(
+      screen.getByText("Built idempotent payment APIs."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Full interview transcript")).toBeInTheDocument();
   });
 
   it("shows evaluation progress without requesting a report early", () => {

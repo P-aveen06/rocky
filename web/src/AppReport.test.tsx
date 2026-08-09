@@ -59,6 +59,15 @@ describe("report navigation", () => {
             gaps: [],
             practice_exercises: [],
             uncertainty: ["No candidate evidence was available."],
+            candidate_profile: {
+              headline: "Backend engineer",
+              highlights: [],
+            },
+            target_role: {
+              title: "Backend Engineer",
+              seniority: "mid",
+            },
+            transcript: [],
             completed_at: "2026-08-07T10:32:00Z",
           }),
           { status: 200 },
