@@ -25,6 +25,7 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import api.database as database
@@ -35,10 +36,13 @@ from api.database import (
     normalized_database_url,
 )
 from api.main import create_app
-from api.models import InterviewTurn
+from api.models import InterviewTurn, User
 from api.services.realtime import RealtimeClientSecret
 from api.services.transcription import FinalTranscription, TranscriptionServiceError
-from api.services.worked_example import WORKED_EXAMPLE_TITLE
+from api.services.worked_example import (
+    WORKED_EXAMPLE_TITLE,
+    ensure_guest_worked_example,
+)
 from domain.evaluation import (
     CompetencyEvaluation,
     EvaluationReport,
@@ -2348,6 +2352,36 @@ def test_new_guest_receives_a_complete_evidence_backed_worked_example(
         for competency in report["competency_results"]:
             for evidence in competency["evidence"]:
                 assert evidence["quote"] in transcript_by_id[evidence["turn_id"]]
+
+
+def test_worked_example_seed_respects_foreign_key_insert_order(
+    tmp_path: Path,
+) -> None:
+    """Exercise PostgreSQL-style foreign-key checks in the local SQLite suite."""
+
+    settings = _guest_settings(tmp_path, "worked-example-foreign-keys.db")
+    engine, session_factory = database.create_database(settings)
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def enable_sqlite_foreign_keys(dbapi_connection, _connection_record) -> None:
+        dbapi_connection.execute("PRAGMA foreign_keys=ON")
+
+    async def seed_example() -> bool:
+        try:
+            await database.create_schema(engine)
+            async with session_factory() as session:
+                user = User(
+                    auth_subject="guest:foreign-key-test",
+                    email="foreign-keys@example.com",
+                    display_name="Foreign Key Test",
+                )
+                session.add(user)
+                await session.commit()
+                return await ensure_guest_worked_example(session, user)
+        finally:
+            await engine.dispose()
+
+    assert asyncio.run(seed_example()) is True
 
 
 def test_worked_example_is_not_duplicated_or_recreated_after_deletion(

@@ -411,7 +411,7 @@ def _evaluation_draft(turn_ids: dict[int, str]) -> EvaluationDraft:
     )
 
 
-def _build_records(user: User) -> list[object]:
+def _build_record_batches(user: User) -> list[list[object]]:
     now = datetime.now(UTC)
     created_at = now - timedelta(days=1, minutes=40)
     started_at = created_at + timedelta(minutes=5)
@@ -657,23 +657,34 @@ def _build_records(user: User) -> list[object]:
         estimated_cost_microusd=0,
         created_at=now,
     )
-    return [upload, profile, target, scorecard, interview, *turns, evaluation, marker]
+    # These models reference one another by ID rather than ORM relationships,
+    # so SQLAlchemy cannot infer their dependency order during one large flush.
+    # Keep each dependency layer explicit for databases that enforce foreign keys.
+    return [
+        [upload, target],
+        [profile, scorecard],
+        [interview],
+        [*turns, evaluation, marker],
+    ]
 
 
 async def ensure_guest_worked_example(database: AsyncSession, user: User) -> bool:
     """Seed the example once; return whether this request created it."""
 
+    user_id = user.id
     existing = await database.scalar(
         select(UsageEvent.id).where(
-            UsageEvent.user_id == user.id,
+            UsageEvent.user_id == user_id,
             UsageEvent.kind == WORKED_EXAMPLE_EVENT,
         )
     )
     if existing is not None:
         return False
 
-    database.add_all(_build_records(user))
     try:
+        for batch in _build_record_batches(user):
+            database.add_all(batch)
+            await database.flush()
         await database.commit()
         return True
     except IntegrityError:
@@ -683,7 +694,7 @@ async def ensure_guest_worked_example(database: AsyncSession, user: User) -> boo
         await database.rollback()
         existing = await database.scalar(
             select(UsageEvent.id).where(
-                UsageEvent.user_id == user.id,
+                UsageEvent.user_id == user_id,
                 UsageEvent.kind == WORKED_EXAMPLE_EVENT,
             )
         )
