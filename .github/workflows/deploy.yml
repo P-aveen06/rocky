@@ -28,7 +28,11 @@ jobs:
         with:
           access-token: ${{ secrets.ZEROPS_TOKEN }}
           service-id: ${{ vars.ZEROPS_SERVICE_ID }}
+      # Zerops only assigns the public subdomain after the first deploy, so
+      # APP_URL cannot be set until this workflow has run once. Skip rather than
+      # fail a deploy that actually succeeded.
       - name: Verify the deployment is serving
+        if: ${{ vars.APP_URL != '' }}
         run: |
           curl --fail --show-error --retry 10 --retry-delay 6 \
             "${{ vars.APP_URL }}/api/health/ready"
