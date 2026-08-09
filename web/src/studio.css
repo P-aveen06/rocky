@@ -169,24 +169,20 @@ textarea {
   cursor: pointer;
 }
 
+/* The mission patch carries its own shield outline and dark field, so it gets
+   no border, plate or rotation of its own -- those fought the artwork. Shared
+   by the sidebar brand and the landing header. */
 .studio-brand__mark {
   display: grid;
-  width: var(--space-6);
-  height: var(--space-6);
+  width: var(--space-7);
+  height: var(--space-7);
   flex: 0 0 auto;
   place-items: center;
-  border: var(--border-width) solid var(--color-text);
-  border-radius: var(--radius-lg);
-  background: var(--color-warning-soft);
-  transform: rotate(-3deg);
+  background: url("./assets/rocky-patch.png") center / contain no-repeat;
 }
 
 .studio-brand__mark span {
-  width: var(--space-3);
-  height: var(--space-2);
-  border-bottom: calc(var(--border-width) * 2) solid var(--color-text);
-  border-left: calc(var(--border-width) * 2) solid var(--color-text);
-  transform: translateY(-2px) rotate(-45deg);
+  display: none;
 }
 
 .studio-brand__copy {

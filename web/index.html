@@ -3,6 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Under /assets because that is the only directory the FastAPI server
+         mounts; anything at the root falls through to the SPA index. -->
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/assets/favicon-32.png"
+    />
+    <link rel="apple-touch-icon" href="/assets/rocky-icon-180.png" />
     <meta
       name="description"
       content="Rocky turns your résumé and target role into realistic live interview practice with evidence-backed coaching."

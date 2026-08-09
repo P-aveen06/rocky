@@ -212,16 +212,15 @@ h3 {
   letter-spacing: -0.01em;
 }
 
+/* Same mission patch as the sidebar brand; the "R" it used to hold is kept in
+   the markup as a fallback but sits behind the artwork. */
 .topbar__brand-mark {
   display: grid;
-  width: var(--space-5);
-  height: var(--space-5);
+  width: var(--space-6);
+  height: var(--space-6);
   place-items: center;
-  border-radius: var(--radius-sm);
-  color: var(--color-bg);
-  background: var(--color-text);
-  font-size: var(--text-xs);
-  font-weight: 700;
+  background: url("./assets/rocky-patch.png") center / contain no-repeat;
+  font-size: 0;
 }
 
 .topbar__spacer {
@@ -2961,7 +2960,10 @@ h3 {
    nowhere else: it is never uploaded and never added to the peer connection. */
 .self-view {
   width: 100%;
-  max-width: calc(var(--space-9) * 2);
+  /* Doubled from 2 units: the preview is what the candidate checks their own
+     framing against, and at 192px it was too small to see whether they were
+     actually centred. `width: 100%` still caps it on narrower canvases. */
+  max-width: calc(var(--space-9) * 4);
   margin-top: var(--space-4);
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
