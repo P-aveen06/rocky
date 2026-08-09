@@ -35,9 +35,9 @@ export function GuestSignIn({ onStarted, onCancel }: GuestSignInProps) {
     <section className="card auth-card" aria-labelledby="guest-title">
       <div className="topbar__brand auth-card__brand">
         <div className="topbar__brand-mark" aria-hidden="true">
-          IC
+          R
         </div>
-        <span>AI Interview Coach</span>
+        <span>Rocky</span>
       </div>
       <p className="section__eyebrow">Guest access</p>
       <h1 id="guest-title">Tell us who you are</h1>

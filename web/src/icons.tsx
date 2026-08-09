@@ -46,6 +46,32 @@ export function FileIcon({ size = 20 }: IconProps) {
   );
 }
 
+export function HomeIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...common}>
+      <path d="m3 10 9-8 9 8" />
+      <path d="M5 9v12h14V9M9 21v-6h6v6" />
+    </svg>
+  );
+}
+
+export function ChartIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...common}>
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    </svg>
+  );
+}
+
+export function BriefcaseIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...common}>
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M8 7V4h8v3M3 12h18M10 12v2h4v-2" />
+    </svg>
+  );
+}
+
 export function MoonIcon({ size = 16 }: IconProps) {
   return (
     <svg width={size} height={size} {...common}>
@@ -59,6 +85,15 @@ export function SunIcon({ size = 16 }: IconProps) {
     <svg width={size} height={size} {...common}>
       <circle cx="12" cy="12" r="4" />
       <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+    </svg>
+  );
+}
+
+export function LogOutIcon({ size = 16 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...common}>
+      <path d="M10 17l5-5-5-5M15 12H3" />
+      <path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" />
     </svg>
   );
 }
@@ -80,6 +115,15 @@ export function UploadIcon({ size = 20 }: IconProps) {
   );
 }
 
+export function DownloadIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...common}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="m7 10 5 5 5-5M12 15V3" />
+    </svg>
+  );
+}
+
 export function CheckIcon({ size = 20 }: IconProps) {
   return (
     <svg width={size} height={size} {...common}>
@@ -92,6 +136,14 @@ export function ChevronDownIcon({ size = 20 }: IconProps) {
   return (
     <svg width={size} height={size} {...common}>
       <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+export function ChevronLeftIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...common}>
+      <path d="m15 18-6-6 6-6" />
     </svg>
   );
 }
@@ -127,6 +179,14 @@ export function StopIcon({ size = 20 }: IconProps) {
   return (
     <svg width={size} height={size} {...common}>
       <rect x="5" y="5" width="14" height="14" rx="2" />
+    </svg>
+  );
+}
+
+export function PlayIcon({ size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...common}>
+      <path d="m8 5 11 7-11 7Z" />
     </svg>
   );
 }

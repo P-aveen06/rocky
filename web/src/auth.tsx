@@ -11,6 +11,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { setAuthTokenProvider } from "./api";
 import { clerkEnabled, clerkPublishableKey } from "./authConfig";
 import { GuestSignIn } from "./GuestSignIn";
+import { LogOutIcon } from "./icons";
 import {
   clearGuestSession,
   readGuestSession,
@@ -141,7 +142,7 @@ export function AccountButton() {
   if (guest) {
     return (
       <button
-        className="btn btn--ghost btn--small"
+        className="btn btn--ghost btn--small account-button"
         type="button"
         title={guest.email}
         onClick={() => {
@@ -149,7 +150,8 @@ export function AccountButton() {
           window.location.reload();
         }}
       >
-        Leave guest session
+        <LogOutIcon />
+        <span>Leave guest session</span>
       </button>
     );
   }

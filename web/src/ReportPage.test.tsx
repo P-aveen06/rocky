@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ReportPage } from "./ReportPage";
+import { reportFileName, reportToHtml } from "./reportExport";
 import type { InterviewReport, InterviewSession } from "./types";
 
 const readyInterview: InterviewSession = {
@@ -183,6 +184,9 @@ describe("evidence report", () => {
     expect(
       screen.getByRole("button", { name: "Disable delivery coaching" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Download HTML" }),
+    ).toBeInTheDocument();
 
     await userEvent.click(screen.getByText("View 1 transcript excerpt"));
     expect(
@@ -204,6 +208,24 @@ describe("evidence report", () => {
       screen.getByText("Built idempotent payment APIs."),
     ).toBeInTheDocument();
     expect(screen.getByText("Full interview transcript")).toBeInTheDocument();
+  });
+
+  it("builds a standalone, escaped HTML report", () => {
+    const unsafeInterview = {
+      ...readyInterview,
+      title: 'Backend <script>alert("x")</script>',
+    };
+    const html = reportToHtml(unsafeInterview, report);
+
+    expect(html).toContain("<!doctype html>");
+    expect(html).toContain("Rocky");
+    expect(html).toContain("Full interview transcript");
+    expect(html).toContain("Speaking delivery");
+    expect(html).toContain("Backend &lt;script&gt;");
+    expect(html).not.toContain('<script>alert("x")</script>');
+    expect(reportFileName(unsafeInterview)).toBe(
+      "rocky-backend-script-alert-x-script.html",
+    );
   });
 
   it("shows evaluation progress without requesting a report early", () => {

@@ -1,6 +1,12 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
 
@@ -20,6 +26,10 @@ const createdSession = {
   updated_at: "2026-08-06T10:00:00Z",
 };
 
+beforeEach(() => {
+  window.localStorage.setItem("rocky-onboarding-complete", "true");
+});
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -27,6 +37,86 @@ afterEach(() => {
 });
 
 describe("session dashboard", () => {
+  it("uses one persistent sidebar without a duplicate top bar", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(currentUser), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ items: [] }), { status: 200 }),
+      );
+
+    render(<App />);
+
+    await screen.findByRole("heading", {
+      name: "Welcome back, Local developer",
+    });
+    expect(
+      screen.queryByRole("button", { name: "Settings & privacy" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+
+    const sidebar = screen.getByRole("complementary", {
+      name: "Workspace navigation",
+    });
+    expect(
+      within(sidebar).getByLabelText("Private workspace"),
+    ).toBeInTheDocument();
+    expect(
+      within(sidebar).getByRole("button", {
+        name: "Switch to dark theme",
+      }),
+    ).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Collapse sidebar" }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Expand sidebar" }),
+    ).toBeInTheDocument();
+    expect(document.querySelector(".app-shell")).toHaveClass(
+      "app-shell--sidebar-collapsed",
+    );
+    expect(window.localStorage.getItem("rocky-sidebar-collapsed")).toBe("true");
+  });
+
+  it("guides a first-time visitor through Rocky once", async () => {
+    window.localStorage.removeItem("rocky-onboarding-complete");
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(currentUser), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ items: [] }), { status: 200 }),
+      );
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Meet Rocky, your interview practice copilot.",
+      }),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(
+      screen.getByRole("heading", {
+        name: "Build an evidence-backed profile.",
+      }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Start with Rocky" }),
+    );
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("rocky-onboarding-complete")).toBe(
+      "true",
+    );
+  });
+
   it("loads the user and creates an empty practice session", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")

@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api, ApiError } from "./api";
-import { ArrowLeftIcon, CheckIcon, ClockIcon, FileIcon } from "./icons";
+import analyticsIllustration from "./assets/blush/analytics.png";
+import checkIllustration from "./assets/blush/check.png";
+import processIllustration from "./assets/blush/process.png";
+import studyingIllustration from "./assets/blush/studying.png";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  ClockIcon,
+  DownloadIcon,
+  FileIcon,
+} from "./icons";
+import { reportFileName, reportToHtml } from "./reportExport";
 import type {
   CompetencyResult,
   InterviewReport,
@@ -212,6 +223,21 @@ export function ReportPage({
     }
   }
 
+  function downloadHtmlReport() {
+    if (!report) return;
+    const html = reportToHtml(interview, report);
+    const url = URL.createObjectURL(
+      new Blob([html], { type: "text/html;charset=utf-8" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = reportFileName(interview);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
   if (interview.status === "FAILED_RECOVERABLE") {
     return (
       <main className="canvas report-canvas">
@@ -224,6 +250,11 @@ export function ReportPage({
           Practice sessions
         </button>
         <section className="card report-processing" role="alert">
+          <img
+            className="report-processing__art"
+            src={processIllustration}
+            alt="A person reviewing the interview process"
+          />
           <p className="section__eyebrow">Evaluation paused</p>
           <h1>Your transcript is safe</h1>
           <p>
@@ -261,6 +292,11 @@ export function ReportPage({
           role="status"
           aria-live="polite"
         >
+          <img
+            className="report-processing__art"
+            src={processIllustration}
+            alt="A person reviewing interview notes"
+          />
           <div className="report-processing__mark" aria-hidden="true">
             <ClockIcon size={24} />
           </div>
@@ -356,9 +392,24 @@ export function ReportPage({
             It is coaching guidance, not a hiring decision.
           </p>
         </div>
-        <span className="report-ready-badge">
-          <CheckIcon size={16} /> Report ready
-        </span>
+        <div className="report-header__aside">
+          <img
+            src={analyticsIllustration}
+            alt="A coach reviewing an interview report"
+          />
+          <div className="report-header__actions">
+            <span className="report-ready-badge">
+              <CheckIcon size={16} /> Report ready
+            </span>
+            <button
+              className="btn btn--primary btn--sm"
+              type="button"
+              onClick={downloadHtmlReport}
+            >
+              <DownloadIcon size={16} /> Download HTML
+            </button>
+          </div>
+        </div>
       </header>
 
       <section className="report-summary-grid" aria-label="Evaluation summary">
@@ -377,8 +428,10 @@ export function ReportPage({
           </p>
         </article>
         <article className="card report-stat-card">
-          <span>Delivery coaching</span>
-          <strong>Separate</strong>
+          <span>Competencies assessed</span>
+          <strong>
+            {assessedCount} / {report.competency_results.length}
+          </strong>
           <p>Speaking metrics never change this evidence score.</p>
         </article>
       </section>
@@ -494,8 +547,15 @@ export function ReportPage({
 
         <aside className="report-sidebar" aria-label="Coaching summary">
           <section className="card report-coaching-card">
-            <p className="section__eyebrow">What worked</p>
-            <h2>Strengths</h2>
+            <div className="report-coaching-card__header">
+              <div>
+                <p className="section__eyebrow">What worked</p>
+                <h2>Strengths</h2>
+              </div>
+              <span className="report-coaching-card__art" aria-hidden="true">
+                <img src={checkIllustration} alt="" />
+              </span>
+            </div>
             {report.strengths.length > 0 ? (
               <ul>
                 {report.strengths.map((strength) => (
@@ -510,8 +570,15 @@ export function ReportPage({
           </section>
 
           <section className="card report-coaching-card">
-            <p className="section__eyebrow">Focus next</p>
-            <h2>Growth areas</h2>
+            <div className="report-coaching-card__header">
+              <div>
+                <p className="section__eyebrow">Focus next</p>
+                <h2>Growth areas</h2>
+              </div>
+              <span className="report-coaching-card__art" aria-hidden="true">
+                <img src={studyingIllustration} alt="" />
+              </span>
+            </div>
             {report.gaps.length > 0 ? (
               <ul>
                 {report.gaps.map((gap) => (
@@ -526,8 +593,15 @@ export function ReportPage({
           </section>
 
           <section className="card report-coaching-card">
-            <p className="section__eyebrow">Practice plan</p>
-            <h2>Exercises</h2>
+            <div className="report-coaching-card__header">
+              <div>
+                <p className="section__eyebrow">Practice plan</p>
+                <h2>Exercises</h2>
+              </div>
+              <span className="report-coaching-card__art" aria-hidden="true">
+                <img src={processIllustration} alt="" />
+              </span>
+            </div>
             {report.practice_exercises.length > 0 ? (
               <div className="report-exercise-list">
                 {report.practice_exercises.map((exercise, index) => (

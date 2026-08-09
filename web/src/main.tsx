@@ -7,14 +7,13 @@ import "@fontsource/jetbrains-mono/latin-500.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { App } from "./App";
-import { AuthGate } from "./auth";
+import { RockyRoot } from "./RockyRoot";
 import "./styles.css";
+import "./studio.css";
+import "./landing.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <AuthGate>
-      <App />
-    </AuthGate>
+    <RockyRoot />
   </StrictMode>,
 );

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { api, ApiError } from "./api";
+import paperworkIllustration from "./assets/blush/paperwork.png";
 import { loadSampleResume, SAMPLE_ROLES, type SampleRole } from "./samples";
 import {
   ArrowLeftIcon,
@@ -493,9 +494,15 @@ export function SetupPage({
             Review the evidence, define the role, then tune the interview focus.
           </p>
         </div>
-        <span className={statusPillClass(interview.status)}>
-          {statusPill(interview.status).label}
-        </span>
+        <div className="setup-header__aside">
+          <img
+            src={paperworkIllustration}
+            alt="A candidate organizing profile and role notes"
+          />
+          <span className={statusPillClass(interview.status)}>
+            {statusPill(interview.status).label}
+          </span>
+        </div>
       </section>
 
       {loading ? (

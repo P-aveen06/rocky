@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api, ApiError } from "./api";
+import videoCallIllustration from "./assets/blush/video-call.png";
 import {
   ArrowLeftIcon,
   CheckIcon,
@@ -882,7 +883,13 @@ export function PracticePage({
                 A short check now prevents interruptions once the timer starts.
               </p>
             </div>
-            <span className="badge">15–60 min</span>
+            <div className="practice-header__aside">
+              <img
+                src={videoCallIllustration}
+                alt="A candidate getting ready for a video interview"
+              />
+              <span className="badge">15–60 min</span>
+            </div>
           </section>
 
           {error ? (
