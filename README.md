@@ -1,387 +1,370 @@
-# AI Interview Coach
+<div align="center">
 
-A browser-based interview-practice product built as one React + TypeScript and
-FastAPI application. It covers the M1–M6 product path: secure résumé/JD setup,
-browser Realtime interviews with a quiet-room text mode, evidence-backed
-reports, optional speaking-delivery coaching, and private-alpha quota,
-retention, deletion, and usage controls.
+<img src="docs/screenshots/rocky-patch.png" alt="Rocky mission patch" width="130" />
 
-It deploys to [Zerops](https://docs.zerops.io/) with a managed PostgreSQL
-service on the project's private network and sign-in through Clerk.
+# Rocky
 
-## Repository layout
+**Practice for the interview you actually want.**
+
+Rocky turns your résumé and a real job description into a live interview,
+then tells you what your answers actually proved.
+
+[Live demo](https://app-2c7f-8000.prg1.zerops.app) ·
+[Video walkthrough](https://youtu.be/3f3UjxkfLP0) ·
+[Write-up](https://medium.com/@paveenkumar.dev/rocky-3717406e2db2) ·
+[X](https://x.com/paveen_kumar06/status/2086513152213266615)
+
+<br />
+
+<img src="docs/screenshots/report.png" alt="An evidence-backed Rocky report: weighted score, coverage, and per-competency feedback with transcript excerpts" width="88%" />
+
+<sub>What you get at the end: a score per competency, the transcript excerpt behind it, and what to practise next.</sub>
+
+</div>
+
+---
+
+## The problem
+
+Interview preparation is mostly guesswork.
+
+You read a list of "top 50 questions" that has nothing to do with the job you
+applied for. You rehearse in front of a mirror and can't tell whether the answer
+landed. A friend does a mock interview, is kind about it, and you leave with
+"that was good!" — which is not feedback, it's encouragement.
+
+The three things that would actually help are the three things that are hardest
+to get:
+
+1. **Questions that match this role**, not a generic template.
+2. **An interviewer who follows up** when your answer is vague, the way a real
+   one does.
+3. **Honest feedback tied to what you actually said** — not a vibe, not a score
+   out of ten that nobody can explain.
+
+A good human coach solves all three, and costs money most people preparing for
+their first or next job don't have.
+
+## How Rocky solves it
+
+You give Rocky two things you already have: your résumé and the job description
+you're applying to. From there it does what a good interviewer does.
+
+**It reads your résumé into evidence.** Every claim it extracts stays linked to
+the exact line in your document it came from. You can correct anything before
+the interview starts. Nothing gets invented on your behalf.
+
+**It turns the job description into a scorecard.** The role's actual
+requirements become weighted competencies — must-haves and nice-to-haves, adding
+up to 100%. You can edit the weights. This scorecard is the entire agenda for
+the interview and the entire basis for your feedback.
+
+**It runs a real conversation.** You speak, Rocky listens, and it asks the
+follow-up your answer invited. It's a voice interview by default; if you're
+somewhere you can't speak, there's a quiet text mode that keeps the camera and
+microphone switched off completely.
+
+**It reports evidence, not vibes.** Afterwards you get a score per competency,
+each one attached to the sentence in your transcript that earned it, plus the
+gaps, what remains uncertain, and a short practice drill for next time. If a
+competency never came up, it says "not assessed" instead of guessing.
+
+That last point is the rule the whole product is built around: **if Rocky can't
+point at the words you said, it doesn't get to make the claim.**
+
+---
+
+## Take the tour
+
+### The landing page
+
+You can start without creating an account. Guest access takes a name and an
+email, and drops you into a workspace with a worked example already in it, so
+you can read a finished report before spending twenty minutes producing one.
+
+![Rocky landing page](docs/screenshots/landing.png)
+
+### Your workspace
+
+Sessions you've started, reports that are ready, and the one thing worth
+practising next.
+
+![Rocky dashboard](docs/screenshots/dashboard.png)
+
+### 1 · Résumé becomes evidence
+
+Upload a PDF or DOCX. Rocky extracts claims and groups them into summary,
+experience, skills and education — and every single one links back to the
+paragraph it came from. Edit anything that's wrong. The original file is
+discarded as soon as the text is extracted; only the extracted text and your
+corrections are kept.
+
+![Résumé evidence review](docs/screenshots/resume-evidence.png)
+
+No résumé handy? There are two built-in samples, and they go through exactly the
+same upload path a real file does.
+
+### 2 · Job description becomes a scorecard
+
+Paste the advert, pick a seniority, and Rocky drafts the competencies the
+interview should cover, weighted. Open any one to change its weight or drop it.
+You can't save a scorecard whose weights don't total 100% — the report's maths
+depends on it.
+
+![Generated role scorecard](docs/screenshots/scorecard.png)
+
+### 3 · Preflight
+
+Audio gets checked before the timer starts, not during. Pick a length (2, 5, 15,
+30, 45 or 60 minutes), pick the interview type, and opt in — separately and
+explicitly — to speaking-delivery coaching and on-camera coaching. Both are off
+by default. Preflight and the interview hide the sidebar; there is nothing to
+navigate to while a timer is running.
+
+![Interview preflight checks](docs/screenshots/preflight.png)
+
+### 4 · The interview
+
+A timer, a live transcript, and one question at a time. Voice activity detection
+sends your answer when you pause, so there's no button to hunt for mid-sentence.
+Every answer is transcribed twice: once live so you can see it immediately, and
+once again afterwards with a more accurate model, which quietly replaces the
+live text.
+
+![Live interview room](docs/screenshots/interview.png)
+
+If the connection drops, you reconnect and carry on. A submitted answer never
+gets duplicated.
+
+### 5 · The report
+
+The report at the top of this page, in full: a weighted score, coverage (how
+much of the scorecard the interview actually reached), and per-competency
+feedback with the transcript excerpt behind it. Strengths, growth areas, a
+practice plan with success criteria, and an explicit list of what remains
+uncertain.
+
+If you opted into delivery coaching, speaking pace, filler density and answer
+length appear in their own section — clearly marked as never affecting your
+role-fit score.
+
+The whole thing downloads as a single self-contained HTML file you can keep.
+
+### Dark mode and small screens
+
+<p align="center">
+  <img src="docs/screenshots/dashboard-dark.png" alt="Rocky dashboard in the dark theme" width="68%" />
+  <img src="docs/screenshots/dashboard-mobile.png" alt="Rocky dashboard on a phone, with a bottom navigation bar" width="22%" />
+</p>
+
+---
+
+## Who it's for
+
+Anyone who has to be understood in a room: students and freshers before campus
+placements, professionals moving to a new role, career switchers who need to
+retell their story for a different audience, and the trainers, mentors and
+placement teams who coach them.
+
+It is a coaching tool, not a hiring tool. Rocky never makes a hiring decision
+and never pretends to.
+
+## What Rocky deliberately does not do
+
+- **It does not keep your résumé.** The file's bytes are discarded straight
+  after text extraction.
+- **It does not record you.** Answer audio is streamed through the API to the
+  transcription provider from memory and never touches disk on either side. No
+  video is uploaded or stored at all.
+- **On-camera coaching runs entirely in your browser.** Face tracking is
+  WebAssembly running locally; what leaves the page is whether you stayed in
+  frame, faced the camera and held steady. Nothing about your expression, mood
+  or personality is inferred or judged.
+- **It does not score personality.** Speaking metrics are observations about
+  pace and pauses, kept in a separate section, and never touch your evidence
+  score.
+- **It does not invent evidence.** Any AI-produced claim without a matching
+  quote from your own words is rejected by the server rather than stored.
+
+---
+
+## The technical part
+
+### How it fits together
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/product-flow-dark.svg" />
+    <img src="docs/diagrams/product-flow-light.svg" alt="Résumé becomes an evidence profile and the job description becomes a scorecard; both feed the live interview, which produces a transcript, which the scorecard turns into an evidence report you can download as standalone HTML" />
+  </picture>
+</p>
+
+The scorecard is frozen when the interview starts, so the questions you were
+asked and the criteria you're judged against can never drift apart.
+
+And the runtime picture, which is deliberately boring — one origin, one process:
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/runtime-dark.svg" />
+    <img src="docs/diagrams/runtime-light.svg" alt="The browser talks to FastAPI on the same origin; FastAPI reaches PostgreSQL and Azure OpenAI for transcription, and hands the browser a short-lived client secret so it can open WebRTC audio to Azure directly" />
+  </picture>
+</p>
+
+Two details worth calling out. The permanent Azure key never leaves the server —
+the browser is handed a short-lived client secret and the fixed Azure WebRTC
+URL, and nothing else. And FastAPI serves the built React app itself, so there
+is no second domain, no CORS configuration, and one thing to deploy.
+
+### Stack
+
+| Layer | What's there |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite, plain CSS (no UI framework) |
+| Backend | FastAPI, SQLAlchemy 2 async, Pydantic v2, Alembic |
+| Database | PostgreSQL in production, file-backed SQLite locally |
+| AI | Azure OpenAI — Realtime for the interview, structured output for extraction and evaluation, two transcription lanes |
+| Face tracking | MediaPipe Tasks Vision, WebAssembly, in-browser only |
+| Auth | Clerk in production, guest tokens, or a local developer identity |
+| Hosting | Zerops, deployed from GitHub Actions on push to `main` |
+
+### Repository layout
 
 ```text
-server/       FastAPI application, domain contracts, migrations, and tests
-web/          React + TypeScript dashboard and Vite build
-zerops.yml    Build and deploy pipeline
-zerops-import.yml
-              One-time Zerops project definition (application + PostgreSQL)
-zerops-db-import.yml
-              Adds PostgreSQL to an existing Zerops project
+server/
+  api/routes/      HTTP surface: intake, realtime, evaluations, delivery,
+                   interviews, operations, auth, health, capabilities
+  api/services/    uploads, profile, scorecards, realtime, transcription,
+                   evaluation, delivery, privacy, retention, worked example
+  domain/          pure rules: intake, interview, evaluation, delivery
+  prompts/         versioned prompts for résumé, scorecard, interview, evaluation
+  migrations/      Alembic revisions
+  tests/           pytest suite
+web/
+  src/             SetupPage, PracticePage, ReportPage, LandingPage,
+                   realtime/voice/video capture, report export
+docs/
+  screenshots/     the images in this file
+  diagrams/        the two diagrams above, as .excalidraw + .mmd + rendered SVG
+  OPERATIONS.md    databases, migrations, retention, manual acceptance pass
+zerops.yml         build + deploy pipeline
 ```
 
-Working notes, specs, plans, and the preserved M0 desktop prototype live in
-`.meta/`, which is deliberately untracked. Nothing in the build depends on it.
+The diagrams are editable: open `docs/diagrams/*.excalidraw` at
+[excalidraw.com](https://excalidraw.com) (File → Open), move a box, and re-export
+over the matching SVG. The `.mmd` files are the original mermaid source they were
+generated from.
 
-## Local development
+### Run it locally
 
-Python 3.11+ and Node.js 22.14+ are recommended.
+Python 3.11+ and Node 22.14+.
 
 ```bash
-python -m venv venv
-source venv/bin/activate
+python -m venv venv && source venv/bin/activate
 python -m pip install -e "./server[dev]"
 npm --prefix web install
 ```
 
-The default local configuration uses a file-backed SQLite database and an
-explicit local developer identity, so there is no sign-in step and no Clerk
-account needed to run the app locally.
-
-Run the API from the `server/` directory:
+The default local setup uses SQLite and a fixed developer identity, so there is
+no sign-in step and no accounts to create.
 
 ```bash
 cd server && uvicorn api.main:app --reload
 ```
 
-In another terminal, run the Vite client:
+In a second terminal:
 
 ```bash
 npm --prefix web run dev
 ```
 
-Open `http://localhost:5173`. Create a practice session, upload a PDF or DOCX
-resume, review its extracted claims, then paste a backend job description. The
-generated scorecard is editable but cannot be saved unless its weights total
-exactly 100%. Continue to preflight to start an M3 interview.
+Open `http://localhost:5173`, create a practice session, load one of the sample
+résumés, and walk the flow. Without Azure credentials the résumé extraction
+falls back to deterministic rules (`PROFILE_EXTRACTION_MODE=rules`) and the
+interview itself won't connect — everything up to preflight still works.
 
-Resume controls are configurable in `.env`. Defaults are 5 MB, 10 PDF pages,
-200,000 extracted characters, 500 DOCX package entries, 20 MB expanded DOCX
-data, and an 8-second extraction timeout. The server validates extension, MIME
-type, and file signature; rejects encrypted, corrupt, empty/scanned-only,
-oversized, and macro-enabled files; and discards raw file bytes immediately after
-extraction. Only normalized text, source segments, a content hash, and upload
-metadata persist.
+### Configuration
 
-When `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_API_KEY` are present, local
-résumé intake uses one structured-output call to the configured
-`AZURE_OPENAI_TEXT_DEPLOYMENT` (default: `gpt-5.6-luna`). The result is cached in
-the candidate profile; page loads and edits do not call the model. Every AI
-evidence item must contain a source ID and a supporting quote that the server
-can match back to extracted résumé text. Unsupported evidence rejects the
-response instead of being stored. Set `PROFILE_EXTRACTION_MODE=rules` for the
-deterministic fallback. Existing rule-extracted profiles show an explicit
-**Improve with AI** action, which refuses to overwrite saved user corrections.
-
-### Configure browser Realtime interviews
-
-Keep the permanent Azure key on the FastAPI server. The browser receives only a
-short-lived client secret and the fixed Azure WebRTC calls URL. Add these values
-to `.env`:
+Copy `.env.example` to `.env`. The values that matter most:
 
 ```text
+# Azure OpenAI — the interview itself
+AZURE_OPENAI_ENDPOINT=...
+AZURE_OPENAI_API_KEY=...
+AZURE_OPENAI_TEXT_DEPLOYMENT=gpt-5.6-luna
 AZURE_OPENAI_REALTIME_DEPLOYMENT=gpt-realtime-2.1
 AZURE_OPENAI_REALTIME_VOICE=alloy
-ENABLE_TEXT_DEV_MODE=true
-```
 
-The endpoint and API key already used for AI profile extraction are reused.
-`ENABLE_TEXT_DEV_MODE` is intended for local testing and should stay disabled in
-production. In text mode the page creates no camera or microphone input track;
-Azure still returns the interviewer's spoken audio. Typed answers accept up to
-20,000 Unicode characters by default and are rejected explicitly above that
-limit rather than truncated.
-
-### Configure dual voice transcription
-
-Voice interviews transcribe each answer twice: live during the interview so the
-candidate sees text immediately, and again after the answer ends with a
-higher-accuracy model whose text replaces the live text. Both lanes are
-required — voice preflight refuses to start when either is unconfigured, and
-names the missing one.
-
-```text
+# Both transcription lanes are required before a voice interview will start
 AZURE_OPENAI_REALTIME_TRANSCRIPTION_MODEL=gpt-realtime-whisper
 AZURE_OPENAI_FINAL_TRANSCRIPTION_DEPLOYMENT=gpt-4o-transcribe
 AZURE_OPENAI_TRANSCRIPTION_LANGUAGE=en
-AZURE_OPENAI_TRANSCRIPTION_DELAY=low
-AZURE_OPENAI_TRANSCRIPTION_API_VERSION=2024-06-01
+
+# Local convenience
+ENABLE_TEXT_DEV_MODE=true    # quiet text mode; keep this off in production
 ```
 
-These two values must be your **Azure deployment names, not model names**. They
-are identical only when the deployment was created with its model's name. A
-deployment named `whisper-prod` must be written as `whisper-prod` here; a
-model-name value that does not exist as a deployment fails at request time with
-`transcription_deployment_missing` rather than at startup.
+Those two transcription values must be your **Azure deployment names, not model
+names**. They only look the same when the deployment was created with its
+model's name. A wrong value fails at request time with
+`transcription_deployment_missing`, not at startup.
 
-Final transcription calls the deployment-scoped route
-`/openai/deployments/<deployment>/audio/transcriptions`, selected by
-`AZURE_OPENAI_TRANSCRIPTION_API_VERSION`. Azure AI Foundry resources answer
-`DeploymentNotFound` on the unified `/openai/v1/audio/transcriptions` surface
-even when the deployment exists, so do not switch to it without verifying
-against the target resource first.
+Résumé intake limits are configurable and default to 5 MB, 10 PDF pages, 200,000
+extracted characters and an 8-second extraction timeout. The server validates
+extension, MIME type and file signature, and rejects encrypted, corrupt,
+scanned-only, oversized and macro-enabled files.
 
-`AZURE_OPENAI_TRANSCRIPTION_LANGUAGE` biases both lanes toward one language.
-`AZURE_OPENAI_TRANSCRIPTION_DELAY` trades live latency against live accuracy;
-it does not affect the final transcript. Timeout and upload size are tunable
-with `AZURE_OPENAI_FINAL_TRANSCRIPTION_TIMEOUT_SECONDS` (default 30) and
-`AZURE_OPENAI_FINAL_TRANSCRIPTION_MAX_BYTES` (default 25 MB).
+Private-alpha guardrails default to 10 interviews and 20 evaluations per day per
+user, with 30-day retention for transcripts, drafts and delivery metrics.
 
-Answer audio is buffered in browser memory and streamed through the API to
-Azure without ever being written to disk on either side. See
-`.meta/docs/RETENTION_AND_DELETION.md` for the exact
-lifecycle and release points.
+#### Authentication
 
-Transcription is not infallible. When the final lane fails the interview
-continues on the live transcript and shows a nonblocking status; when both lanes
-fail for one answer the microphone pauses and the candidate must press
-**Reconnect**, which retries the retained answer.
+- **`local`** — one fixed developer identity, no sign-in. The default, and what
+  CI runs.
+- **`guest`** — a name and an email issue a signed short-lived token. New guests
+  get a pre-built worked example so the report is reachable immediately.
+- **`clerk`** — the browser sends a Clerk session token; the server verifies
+  signature, issuer, expiry and authorized party before trusting the subject.
+  Required in staging and production.
 
-Running against a database created before this feature requires the new
-transcript-provenance columns. The head revision is `20260808_0008`.
+Clerk's default session token carries neither email nor name, and the API
+rejects a token without an email. Add them under **Configure → Sessions →
+Customize session token**:
 
-For an Alembic-managed database:
-
-```bash
-cd server && alembic upgrade head
+```json
+{ "email": "{{user.primary_email_address}}", "name": "{{user.full_name}}" }
 ```
 
-For a database first created with `AUTO_CREATE_SCHEMA=true`, `upgrade head`
-fails with "table users already exists": the tables exist but no
-`alembic_version` row records that. Tell Alembic what the schema already matches
-before upgrading:
+### Deploy
 
-```bash
-cd server
-alembic stamp 20260807_0007
-alembic upgrade head
-```
-
-Only stamp a database whose schema really is at `20260807_0007`; stamping
-records a revision without running it. Revision `20260808_0008` adds three
-nullable-or-defaulted columns to `interview_turns` and backfills existing rows
-with `transcription_source="legacy"`, so no turn, session, or report is lost.
-Back the file up first anyway:
-
-```bash
-cp data/interview_coach.db data/interview_coach.db.bak
-```
-
-### Use Neon PostgreSQL locally
-
-Create a Neon project, open its **Connect** dialog, disable connection pooling,
-and copy the direct connection string. Do not paste the connection string into
-chat or commit it because it contains the database password.
-
-Copy `.env.example` to `.env`, then set:
-
-```text
-APP_ENV=local
-AUTH_MODE=local
-AUTO_CREATE_SCHEMA=false
-DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@ep-example.REGION.aws.neon.tech/neondb?sslmode=verify-full
-```
-
-If Neon supplied a URL beginning with `postgresql://`, the application adds the
-`asyncpg` driver automatically. It also adapts Neon's libpq-oriented
-`channel_binding` option to asyncpg with full TLS certificate and hostname
-verification.
-
-Apply the schema, then start the API:
-
-```bash
-source venv/bin/activate
-cd server
-alembic upgrade head
-uvicorn api.main:app --reload
-```
-
-In another terminal, start the dashboard with `npm --prefix web run dev`. Create
-a session and refresh to confirm that it persists in Neon.
-
-SQLite remains the default zero-setup option for local work.
-
-### Use Supabase PostgreSQL locally (optional)
-
-Production uses PostgreSQL inside Zerops. Supabase remains supported as an
-optional database for local development or data export. In the Supabase
-dashboard open **Project Settings → Database → Connection string → URI** and
-copy the **session pooler** URL, which looks like:
-
-```text
-postgresql://postgres.PROJECTREF:PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres
-```
-
-Four details matter, and the application handles each of them for you:
-
-- **Use the pooler, not the direct endpoint.** `db.PROJECTREF.supabase.co`
-  publishes only an AAAA record — it is IPv6-only, and unreachable from an
-  IPv4-only network. The pooler is IPv4 on every tier. Note the pooler username
-  is `postgres.PROJECTREF`, not plain `postgres`.
-- **Port 5432 is session mode; 6543 is transaction mode.** Session mode is the
-  simpler default. If you do use 6543, the app detects the port and turns off
-  both asyncpg's and SQLAlchemy's prepared-statement caches, because a
-  transaction pooler multiplexes connections and would otherwise fail with
-  `DuplicatePreparedStatement`.
-- **TLS uses Supabase's own CA.** Supabase serves a certificate issued by
-  `Supabase Root 2021 CA`, which is not in any public trust store, so verifying
-  against certifi fails with `CERTIFICATE_VERIFY_FAILED`. That root is a public
-  certificate and is vendored at `server/certs/supabase-prod-ca-2021.crt`;
-  Supabase hosts use it automatically. `DATABASE_SSL_ROOT_CERT` overrides it if
-  Supabase ever rotates the root.
-- **`sslmode` and `channel_binding` are stripped** from the URL before it
-  reaches asyncpg, which does not accept them. Verification still happens —
-  this is `verify-full`, not a downgrade.
-
-Set in `.env`:
-
-```text
-APP_ENV=local
-AUTH_MODE=local
-AUTO_CREATE_SCHEMA=false
-DATABASE_URL=postgresql://postgres.PROJECTREF:PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres
-```
-
-Then apply the schema with `cd server && alembic upgrade head`.
-
-### Private-alpha privacy and operations
-
-The **Privacy & usage** workspace shows daily session quota, content-free usage
-counts, active retention defaults, and whether provider cost telemetry is
-available. A session can be deleted from its card after confirmation. Account
-deletion requires typing `DELETE MY ACCOUNT`; repeated deletion calls are
-idempotent and a PII-free terminal receipt prevents silent recreation.
-
-Run configured retention cleanup with:
-
-```bash
-cd server && python scripts/run_retention.py
-```
-
-Operational references — retention and deletion, the browser and
-accessibility matrix, the incident runbook, and the private-alpha exit
-checklist — live under `.meta/docs/`, which is untracked and local-only.
-
-## One-artifact production build
-
-```bash
-npm --prefix web run build
-cd server && uvicorn api.main:app --host 127.0.0.1 --port 8000
-```
-
-FastAPI serves `web/dist` and all `/api` routes from the same origin, so there
-is no CORS configuration and no second domain. Zerops builds this same
-arrangement.
-
-## Authentication
-
-- `local`: the server supplies one explicit developer identity. No sign-in, no
-  Clerk account, no tokens. This is the default and what CI runs.
-- `clerk`: the browser sends a Clerk session token as a bearer token and the
-  server verifies its RS256 signature, issuer, expiry, and authorized party
-  before trusting the subject. Required in staging and production, alongside
-  PostgreSQL and Alembic-owned schema.
-
-### Clerk setup
-
-1. Create a Clerk application. For a Zerops `*.zerops.app` URL use the
-   **development** instance keys — a Clerk production instance requires a custom
-   domain with a CNAME record, which a platform subdomain cannot satisfy.
-2. **Add email and name to the session token.** Clerk's default session token
-   contains neither, and the API rejects a token without an email. Under
-   **Configure → Sessions → Customize session token**, set:
-
-   ```json
-   { "email": "{{user.primary_email_address}}", "name": "{{user.full_name}}" }
-   ```
-
-3. Set `CLERK_SECRET_KEY` and `CLERK_PUBLISHABLE_KEY`. Copy the PEM public key
-   into `CLERK_JWT_KEY` so verification never makes a network call.
-4. The web build reads `VITE_CLERK_PUBLISHABLE_KEY` at build time. Without it,
-   the client renders no sign-in and expects `AUTH_MODE=local`.
-
-The Content-Security-Policy adds Clerk's origins only when `AUTH_MODE=clerk`,
-including `challenges.cloudflare.com` for Clerk's bot protection widget.
-
-## Deployment (Zerops)
-
-For a new project, the one-time import creates both `app` and a PostgreSQL 17
-service named `db`:
+Production runs on Zerops: one application service plus managed PostgreSQL 17 on
+the project's private network.
 
 ```bash
 zcli login
 zcli project project-import zerops-import.yml
 ```
 
-For an existing Rocky project that currently uses Supabase, add only the
-database service:
+Real secrets go in the Zerops GUI under **Service → Environment variables**; the
+import file ships placeholders on purpose. After that, every push to `main` runs
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml), which needs the
+repository secret `ZEROPS_TOKEN` and the variables `ZEROPS_SERVICE_ID` and
+`APP_URL`. Zerops builds from [`zerops.yml`](zerops.yml): Vite compiles the
+client, `alembic upgrade head` runs on container start, and readiness is gated on
+`/api/health/ready`.
+
+To build the single production artifact yourself:
 
 ```bash
-zcli project service-import zerops-db-import.yml
+npm --prefix web run build
+cd server && uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
 
-The runtime maps `DATABASE_URL` to Zerops's generated
-`${db_connectionString}`. The app connects directly to `db:5432` on the
-project's private network; no public database IP or committed password is
-needed. Then set the remaining real secrets in the Zerops GUI under
-**Service → Environment variables** — the import file ships placeholders on
-purpose.
+Database migrations, running against Neon or Supabase locally, and moving
+existing data into Zerops are covered in
+[docs/OPERATIONS.md](docs/OPERATIONS.md).
 
-### Move existing Supabase data
-
-Skip this section when the existing rows are disposable: the first app deploy
-runs `alembic upgrade head` and creates a clean schema automatically.
-
-To preserve the data, stop writes to the Supabase-backed app, use a `pg_dump`
-client at least as new as the Supabase PostgreSQL server, and export only the
-application-owned `public` schema. Keep both connection URLs out of shell
-history and source control.
-
-```bash
-pg_dump "$SOURCE_DATABASE_URL" \
-  --format=custom \
-  --schema=public \
-  --no-owner \
-  --no-acl \
-  --file=/tmp/rocky-public.dump
-```
-
-Start the Zerops VPN, copy the internal connection URL from the `db` service's
-**Peek access details**, and restore the dump before deploying the application:
-
-```bash
-pg_restore \
-  --dbname="$ZEROPS_DATABASE_URL" \
-  --clean \
-  --if-exists \
-  --no-owner \
-  --no-acl \
-  /tmp/rocky-public.dump
-```
-
-The dump includes `alembic_version`, so the deploy-time migration advances only
-revisions that were not already present. After deployment, verify
-`/api/health/ready`, sign in, and confirm that an existing interview and report
-can be opened before removing or pausing the Supabase project.
-
-Repeat deploys run from [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
-on every push to `main`. It needs:
-
-- Repository secret `ZEROPS_TOKEN` (Zerops → Settings → Access Token Management)
-- Repository variables `ZEROPS_SERVICE_ID` and `APP_URL`
-
-The workflow is skipped while `ZEROPS_SERVICE_ID` is unset, so it can land
-before the project exists. Zerops runs the build itself from
-[`zerops.yml`](zerops.yml): Vite compiles the client, `web/dist` and `server/`
-are deployed under `/var/www`, `alembic upgrade head` runs on each container
-start, and readiness is gated on `/api/health/ready`.
-
-`server/requirements.txt` is what Zerops installs at runtime, because the
-prepare container cannot see the build tree and so cannot `pip install .`. Keep
-it in sync with `[project].dependencies` in `server/pyproject.toml`.
-
-## Verification
+### Tests and checks
 
 Backend, from `server/`:
 
@@ -394,30 +377,36 @@ python -m pytest tests
 Frontend:
 
 ```bash
-npm --prefix web run format:check
 npm --prefix web run lint
 npm --prefix web run typecheck
 npm --prefix web run test
 npm --prefix web run build
 ```
 
-CI repeats these checks on pull requests and on pushes to `main`.
+CI runs all of these on pull requests and on pushes to `main`.
 
-## M3 manual acceptance test
+There's also a manual acceptance pass that automated tests can't cover —
+completing a voice interview end to end on current Chrome, Safari and Edge, and
+confirming that a spoken answer appears once as live text and is then replaced by
+the final transcript. Voice-mode latency and impaired-network behaviour stay
+manual release checks.
 
-1. Create a practice session. The setup page should open immediately.
-2. Upload a text-based PDF or DOCX under 5 MB and select **Extract profile**.
-3. Generate and save a scorecard whose weights total 100%, then select **Continue to preflight**.
-4. Play the headphone test sound and confirm it. Select **Developer text** when speaking is not practical. The browser must not request camera or microphone permission.
-5. Start a 15-minute interview. Confirm spoken AI audio, the live transcript, connection state, and countdown.
-6. Submit multiline text with Ctrl/Cmd+Enter. Enter alone must add a newline. Refresh before submitting a second draft and confirm the draft returns.
-7. Disconnect and reconnect once. A pending submitted answer must not appear twice.
-8. Stop the interview and wait for the evidence-backed report. Expand one transcript excerpt and confirm its quote matches what was submitted.
-9. In text mode, confirm **Speaking delivery** is marked unavailable rather than scored.
-10. Open **Privacy & usage** and verify the active quota/retention policy. Test session deletion only with a disposable session.
-11. In voice mode, speak one non-sensitive answer such as "I built a FastAPI service backed by PostgreSQL". The candidate turn must appear once, first as live text and then replaced by the final transcript, ending with `transcription_source="final_model"`.
+---
 
-Voice-mode completion on current Chrome, Safari, and Edge, plus the documented
-latency and impaired-network measurements, remain manual M3 release checks.
-The dual-transcription degradation matrix in
-`.meta/docs/PRIVATE_ALPHA_CHECKLIST.md` is also a manual check.
+## Where the name comes from
+
+Rocky is the alien engineer from *Project Hail Mary* — the one who shows up,
+doesn't speak your language, and helps you solve the problem anyway. That felt
+like the right model for an interview copilot: calm, practical, on your side, and
+much more interested in the next problem than in judging you.
+
+The whole thing was built in a 20-hour hackathon. The
+[landing page](https://app-2c7f-8000.prg1.zerops.app/#journey) has the hour-by-hour
+version, and the [write-up](https://medium.com/@paveenkumar.dev/rocky-3717406e2db2)
+has the honest one.
+
+## Credits
+
+Illustrations are from the **The Little Things** Blush collection by Susana
+Salas; source and licence notes live in `design/assets/blush/SOURCES.md`. The
+mission patch and everything derived from it are in `design/assets/brand/`.
