@@ -405,8 +405,17 @@ def test_health_reports_database_readiness(client: TestClient) -> None:
     assert health.json() == {"status": "ok"}
     assert health.headers["X-Content-Type-Options"] == "nosniff"
     assert health.headers["Referrer-Policy"] == "no-referrer"
-    assert "camera=()" in health.headers["Permissions-Policy"]
-    assert "frame-ancestors 'none'" in health.headers["Content-Security-Policy"]
+    # Camera is available for on-device delivery coaching, but scoped to this
+    # origin: an embedded third party still cannot reach it.
+    assert "camera=(self)" in health.headers["Permissions-Policy"]
+    assert "microphone=(self)" in health.headers["Permissions-Policy"]
+    policy = health.headers["Content-Security-Policy"]
+    assert "frame-ancestors 'none'" in policy
+    # Face tracking needs WebAssembly compilation, which is a far narrower
+    # grant than 'unsafe-eval'. The latter would re-enable eval() for
+    # JavaScript and must never appear.
+    assert "'wasm-unsafe-eval'" in policy
+    assert "'unsafe-eval'" not in policy.replace("'wasm-unsafe-eval'", "")
     assert client.get("/api/health/ready").json() == {
         "status": "ready",
         "database": "ok",

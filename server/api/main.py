@@ -44,7 +44,11 @@ _CLERK_TURNSTILE_ORIGIN = "https://challenges.cloudflare.com"
 
 
 def content_security_policy(settings: Settings) -> str:
-    script_src = ["'self'"]
+    # Face tracking runs as WebAssembly in the browser, which needs
+    # wasm-unsafe-eval. It permits compiling WASM and nothing else: unlike
+    # 'unsafe-eval' it does not re-enable eval() or Function() for JavaScript.
+    # The runtime and model are served from this origin, so no host is added.
+    script_src = ["'self'", "'wasm-unsafe-eval'"]
     style_src = ["'self'"]
     connect_src = ["'self'", "https://*.services.ai.azure.com"]
     img_src = ["'self'", "data:"]
@@ -148,8 +152,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
+        # Camera is allowed for on-device delivery coaching. The stream is
+        # rendered locally, never added to the Realtime peer connection, and
+        # never uploaded; only aggregate numbers leave the browser.
         response.headers["Permissions-Policy"] = (
-            "camera=(), geolocation=(), microphone=(self)"
+            "camera=(self), geolocation=(), microphone=(self)"
         )
         response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
         response.headers["Content-Security-Policy"] = policy

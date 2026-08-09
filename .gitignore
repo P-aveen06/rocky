@@ -31,3 +31,7 @@ web/*.tsbuildinfo
 # Local editor settings
 .vscode/
 .idea/
+
+# MediaPipe runtime is copied from node_modules at build time (see
+# web/scripts/sync-mediapipe.mjs). The model beside it is committed.
+web/public/assets/mediapipe/wasm/
