@@ -314,7 +314,7 @@ Then set the real secrets in the Zerops GUI under **Service → Environment
 variables** — `zerops-import.yml` ships placeholders on purpose.
 
 Repeat deploys run from [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
-on every push to `develop`. It needs:
+on every push to `main`. It needs:
 
 - Repository secret `ZEROPS_TOKEN` (Zerops → Settings → Access Token Management)
 - Repository variables `ZEROPS_SERVICE_ID` and `APP_URL`
@@ -349,7 +349,7 @@ npm --prefix web run test
 npm --prefix web run build
 ```
 
-CI repeats these checks on pull requests and on pushes to `main` and `develop`.
+CI repeats these checks on pull requests and on pushes to `main`.
 
 ## M3 manual acceptance test
 
