@@ -20,23 +20,6 @@ export function PlusIcon({ size = 20 }: IconProps) {
   );
 }
 
-export function HomeIcon({ size = 20 }: IconProps) {
-  return (
-    <svg width={size} height={size} {...common}>
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-4a1 1 0 0 1-1-1v-6h-4v6a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2z" />
-    </svg>
-  );
-}
-
-export function ShieldIcon({ size = 20 }: IconProps) {
-  return (
-    <svg width={size} height={size} {...common}>
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
-
 export function TrashIcon({ size = 18 }: IconProps) {
   return (
     <svg width={size} height={size} {...common}>

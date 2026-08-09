@@ -7,14 +7,11 @@ import { ConfirmationDialog } from "./ConfirmationDialog";
 import {
   ClockIcon,
   FileIcon,
-  HomeIcon,
   MoonIcon,
   PlusIcon,
-  ShieldIcon,
   SunIcon,
   TrashIcon,
 } from "./icons";
-import { PrivacyPage } from "./PrivacyPage";
 import { SetupPage } from "./SetupPage";
 import { PracticePage } from "./PracticePage";
 import { ReportPage } from "./ReportPage";
@@ -22,7 +19,6 @@ import { statusPill, statusPillClass } from "./status";
 import type { InterviewSession, User } from "./types";
 
 type Theme = "light" | "dark";
-type WorkspaceView = "sessions" | "privacy";
 
 function initialTheme(): Theme {
   const saved = window.localStorage.getItem("interview-coach-theme");
@@ -49,7 +45,6 @@ export function App() {
   const [selectedInterview, setSelectedInterview] =
     useState<InterviewSession | null>(null);
   const [practiceMode, setPracticeMode] = useState(false);
-  const [workspaceView, setWorkspaceView] = useState<WorkspaceView>("sessions");
   const [pendingDelete, setPendingDelete] = useState<InterviewSession | null>(
     null,
   );
@@ -213,48 +208,12 @@ export function App() {
         )}
       </header>
 
-      <aside className="sidebar" aria-label="Primary navigation">
-        <div className="sidebar__group">
-          <div className="sidebar__label">Workspace</div>
-          <button
-            className={`sidebar__link ${workspaceView === "sessions" && !selectedInterview ? "is-active" : ""}`}
-            type="button"
-            onClick={() => {
-              setSelectedInterview(null);
-              setPracticeMode(false);
-              setWorkspaceView("sessions");
-            }}
-          >
-            <HomeIcon />
-            Practice sessions
-          </button>
-          <button
-            className={`sidebar__link ${workspaceView === "privacy" ? "is-active" : ""}`}
-            type="button"
-            onClick={() => {
-              setSelectedInterview(null);
-              setPracticeMode(false);
-              setWorkspaceView("privacy");
-            }}
-          >
-            <ShieldIcon />
-            Privacy &amp; usage
-          </button>
-        </div>
-        <div className="sidebar__footer">
-          <p>Phase M6</p>
-          <span>Private alpha hardening</span>
-        </div>
-      </aside>
-
-      {workspaceView === "privacy" ? (
-        <PrivacyPage onBack={() => setWorkspaceView("sessions")} />
-      ) : selectedInterview &&
-        (["TRANSCRIPT_FINALIZING", "EVALUATING", "REPORT_READY"].includes(
-          selectedInterview.status,
-        ) ||
-          (selectedInterview.status === "FAILED_RECOVERABLE" &&
-            selectedInterview.ended_at)) ? (
+      {selectedInterview &&
+      (["TRANSCRIPT_FINALIZING", "EVALUATING", "REPORT_READY"].includes(
+        selectedInterview.status,
+      ) ||
+        (selectedInterview.status === "FAILED_RECOVERABLE" &&
+          selectedInterview.ended_at)) ? (
         <ReportPage
           interview={selectedInterview}
           onBack={() => {

@@ -2234,6 +2234,41 @@ def test_unauthenticated_managed_request_has_error_id(tmp_path: Path) -> None:
     assert response.headers["X-Error-ID"] == response.json()["error"]["id"]
 
 
+def test_concurrent_first_requests_create_one_user(tmp_path: Path) -> None:
+    """Parallel first calls for a new subject must not 500.
+
+    The client opens with two requests at once. Both miss the lookup for a
+    brand-new subject and both insert, so one loses on the unique index. That
+    surfaced as a 500 on the very first page load against a fresh database.
+    """
+
+    database_path = tmp_path / "race.db"
+    clerk_settings = _clerk_settings(
+        database_url=f"sqlite+aiosqlite:///{database_path}",
+        auto_create_schema=True,
+        web_dist_dir=tmp_path / "missing-dist",
+    )
+    headers = _principal_headers("user-new", "new@example.test")
+
+    with (
+        TestClient(create_app(clerk_settings)) as clerk_client,
+        ThreadPoolExecutor(max_workers=2) as pool,
+    ):
+        responses = list(
+            pool.map(
+                lambda path: clerk_client.get(path, headers=headers),
+                ["/api/auth/me", "/api/interviews"],
+            )
+        )
+
+    assert [response.status_code for response in responses] == [200, 200]
+    with sqlite3.connect(database_path) as connection:
+        rows = connection.execute(
+            "select count(*) from users where auth_subject = 'user-new'"
+        ).fetchone()[0]
+    assert rows == 1
+
+
 def test_unchanged_identity_does_not_rewrite_the_user_row(tmp_path: Path) -> None:
     """The auth dependency runs per request, so it must not write needlessly.
 

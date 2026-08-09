@@ -15,6 +15,7 @@ import jwt
 from fastapi import Depends, HTTPException, Request, status
 from jwt import PyJWKClient
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import Settings
@@ -210,8 +211,21 @@ async def get_current_user(
             display_name=principal.display_name,
         )
         database.add(user)
-        await database.commit()
-        await database.refresh(user)
+        try:
+            await database.commit()
+        except IntegrityError:
+            # Concurrent first requests for the same new subject both miss the
+            # select above and both insert. The client opens with two parallel
+            # calls, so this is the normal path on a first sign-in, not an
+            # error: take the row the other request committed.
+            await database.rollback()
+            user = await database.scalar(
+                select(User).where(User.auth_subject == principal.subject)
+            )
+            if user is None:
+                raise
+        else:
+            await database.refresh(user)
     elif user.email != principal.email or user.display_name != principal.display_name:
         user.email = principal.email
         user.display_name = principal.display_name
