@@ -49,6 +49,12 @@ class Settings(BaseSettings):
     web_dist_dir: Path = REPO_ROOT / "web" / "dist"
     enable_text_dev_mode: bool = False
     typed_answer_max_characters: int = 20_000
+    # How long the candidate may pause before the turn is treated as finished.
+    # This ends the transcript block *and* cues the interviewer to reply, so a
+    # short value chops one answer into fragments and talks over the candidate.
+    # Ordinary pauses between clauses run to about a second.
+    realtime_silence_duration_ms: int = 1500
+    realtime_prefix_padding_ms: int = 300
     realtime_client_secret_ttl_seconds: int = 120
     realtime_client_secret_rate_limit: int = 6
     realtime_reconnect_window_seconds: int = 180

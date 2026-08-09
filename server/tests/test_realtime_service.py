@@ -111,6 +111,37 @@ async def test_voice_secret_configures_vad_and_input_transcription() -> None:
 
 
 @pytest.mark.asyncio
+async def test_pause_tolerance_is_configurable_and_survives_a_thinking_pause() -> None:
+    """Ending a turn also cues the interviewer, so the threshold must be generous.
+
+    At 550ms the interviewer replied whenever the candidate paused between
+    clauses. One 15 minute interview came out as 52 candidate fragments
+    averaging 31 characters against 47 interviewer replies.
+    """
+
+    observed: dict[str, object] = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        observed.update(json.loads(request.content))
+        return httpx.Response(200, json={"value": "ek_voice", "expires_at": 123})
+
+    settings = _settings()
+    settings = settings.model_copy(update={"realtime_silence_duration_ms": 2400})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        await create_realtime_client_secret(
+            settings=settings,
+            instructions="prompt",
+            input_mode="voice",
+            client=client,
+        )
+
+    detection = observed["session"]["audio"]["input"]["turn_detection"]
+    assert detection["silence_duration_ms"] == 2400
+    # A one second pause mid-answer must not close the turn by default.
+    assert Settings(_env_file=None).realtime_silence_duration_ms > 1000
+
+
+@pytest.mark.asyncio
 async def test_voice_secret_requires_a_configured_live_transcription_deployment() -> (
     None
 ):
