@@ -210,9 +210,43 @@ textarea {
   text-transform: uppercase;
 }
 
+/* Group headings sit inside the nav so each label owns the items beneath it. */
+.studio-nav .studio-sidebar__label:not(:first-child) {
+  margin-top: var(--space-4);
+}
+
 .studio-nav {
   display: grid;
   gap: var(--space-1);
+}
+
+/* Trailing step marker: 01/02/03 until that stage is done, then a check. */
+.studio-nav__step {
+  display: grid;
+  min-width: var(--space-5);
+  height: var(--space-5);
+  place-items: center;
+  margin-left: auto;
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-subtle);
+  background: var(--color-sunken);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  transition:
+    color var(--motion-fast),
+    background var(--motion-fast);
+}
+
+/*
+ * Done uses the success tone rather than the accent: accent means "you are
+ * here", and a completed stage you are not currently on should not compete
+ * with the active item's pill.
+ */
+.studio-nav__step.is-done {
+  color: var(--color-success);
+  background: var(--color-success-soft);
 }
 
 .studio-nav__item {

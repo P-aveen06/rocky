@@ -81,6 +81,46 @@ describe("session dashboard", () => {
     expect(window.localStorage.getItem("rocky-sidebar-collapsed")).toBe("true");
   });
 
+  it("orders the sidebar as the practice loop and marks finished stages", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(currentUser), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            items: [{ ...createdSession, status: "TRANSCRIPT_FINALIZING" }],
+          }),
+          { status: 200 },
+        ),
+      );
+
+    render(<App />);
+    await screen.findByRole("heading", {
+      name: "Welcome back, Local developer",
+    });
+
+    const sidebar = screen.getByRole("complementary", {
+      name: "Workspace navigation",
+    });
+    const items = within(sidebar)
+      .getAllByRole("button")
+      .filter((button) => button.classList.contains("studio-nav__item"));
+
+    // Context first, then rehearsal, then evidence — the order the landing
+    // page promises. The entry point used to sit last, below its own output.
+    expect(items.map((item) => item.getAttribute("aria-label"))).toEqual([
+      "Dashboard",
+      "Résumé & roles (done)",
+      "Practice sessions (done)",
+      "Progress & reports",
+    ]);
+
+    // A session past the interview leaves the report step still outstanding.
+    const steps = within(sidebar).getAllByText(/^0[123]$/);
+    expect(steps.map((step) => step.textContent)).toEqual(["03"]);
+  });
+
   it("guides a first-time visitor through Rocky once", async () => {
     window.localStorage.removeItem("rocky-onboarding-complete");
     vi.spyOn(globalThis, "fetch")

@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { api, ApiError } from "./api";
 import { AccountButton } from "./auth";
@@ -8,6 +14,7 @@ import { ConfirmationDialog } from "./ConfirmationDialog";
 import {
   BriefcaseIcon,
   ChartIcon,
+  CheckIcon,
   ChevronLeftIcon,
   ClockIcon,
   FileIcon,
@@ -38,6 +45,27 @@ const liveStatuses = [
   "RECONNECTING",
   "FAILED_RECOVERABLE",
 ];
+
+/**
+ * How far along the practice loop each status sits. The sidebar uses the
+ * furthest stage any session has reached to mark loop steps as done, so the
+ * navigation reads as a sequence rather than four unrelated destinations.
+ */
+const SETUP_DONE = 2;
+const REHEARSAL_DONE = 4;
+const REPORT_DONE = 5;
+const flowStage: Record<string, number> = {
+  DRAFT: 0,
+  PROFILE_READY: 1,
+  SCORECARD_READY: SETUP_DONE,
+  CONNECTING: 3,
+  IN_PROGRESS: 3,
+  RECONNECTING: 3,
+  FAILED_RECOVERABLE: 3,
+  TRANSCRIPT_FINALIZING: REHEARSAL_DONE,
+  EVALUATING: REHEARSAL_DONE,
+  REPORT_READY: REPORT_DONE,
+};
 const onboardingStorageKey = "rocky-onboarding-complete";
 const sidebarStorageKey = "rocky-sidebar-collapsed";
 
@@ -142,6 +170,15 @@ export function App() {
     () =>
       interviews.filter((interview) => interview.status === "REPORT_READY")
         .length,
+    [interviews],
+  );
+  const furthestStage = useMemo(
+    () =>
+      interviews.reduce(
+        (furthest, interview) =>
+          Math.max(furthest, flowStage[interview.status] ?? 0),
+        -1,
+      ),
     [interviews],
   );
 
@@ -267,6 +304,43 @@ export function App() {
       : "roles"
     : workspaceSection;
 
+  // Ordered to match the loop the landing page promises: bring your context,
+  // rehearse it, then read the evidence back. The old order put the entry
+  // point last, below its own output.
+  const practiceLoop: {
+    section: WorkspaceSection;
+    step: string;
+    label: string;
+    icon: ReactNode;
+    done: boolean;
+    onSelect: () => void;
+  }[] = [
+      {
+        section: "roles",
+        step: "01",
+        label: "Resume & roles",
+        icon: <BriefcaseIcon />,
+        done: furthestStage >= SETUP_DONE,
+        onSelect: openResumeAndRoles,
+      },
+      {
+        section: "sessions",
+        step: "02",
+        label: "Practice sessions",
+        icon: <FileIcon />,
+        done: furthestStage >= REHEARSAL_DONE,
+        onSelect: () => navigateTo("sessions", "practice-sessions"),
+      },
+      {
+        section: "progress",
+        step: "03",
+        label: "Progress & reports",
+        icon: <ChartIcon />,
+        done: furthestStage >= REPORT_DONE,
+        onSelect: () => navigateTo("progress", "progress-reports"),
+      },
+    ];
+
   if (!loading && error?.status === 401) {
     return (
       <main className="auth-page">
@@ -330,8 +404,8 @@ export function App() {
             <ChevronLeftIcon size={16} />
           </button>
 
-          <p className="studio-sidebar__label">Workspace</p>
           <nav className="studio-nav" aria-label="Primary">
+            <p className="studio-sidebar__label">Workspace</p>
             <button
               className={`studio-nav__item ${activeSection === "dashboard" ? "is-active" : ""}`}
               type="button"
@@ -342,36 +416,29 @@ export function App() {
               <HomeIcon />
               <span>Dashboard</span>
             </button>
-            <button
-              className={`studio-nav__item ${activeSection === "sessions" ? "is-active" : ""}`}
-              type="button"
-              aria-label="Practice sessions"
-              aria-current={activeSection === "sessions" ? "page" : undefined}
-              onClick={() => navigateTo("sessions", "practice-sessions")}
-            >
-              <FileIcon />
-              <span>Practice sessions</span>
-            </button>
-            <button
-              className={`studio-nav__item ${activeSection === "progress" ? "is-active" : ""}`}
-              type="button"
-              aria-label="Progress and reports"
-              aria-current={activeSection === "progress" ? "page" : undefined}
-              onClick={() => navigateTo("progress", "progress-reports")}
-            >
-              <ChartIcon />
-              <span>Progress &amp; reports</span>
-            </button>
-            <button
-              className={`studio-nav__item ${activeSection === "roles" ? "is-active" : ""}`}
-              type="button"
-              aria-label="Résumé and roles"
-              aria-current={activeSection === "roles" ? "page" : undefined}
-              onClick={openResumeAndRoles}
-            >
-              <BriefcaseIcon />
-              <span>Résumé &amp; roles</span>
-            </button>
+
+            <p className="studio-sidebar__label">Practice loop</p>
+            {practiceLoop.map(
+              ({ section, step, label, icon, done, onSelect }) => (
+                <button
+                  key={section}
+                  className={`studio-nav__item studio-nav__item--step ${activeSection === section ? "is-active" : ""}`}
+                  type="button"
+                  aria-label={done ? `${label} (done)` : label}
+                  aria-current={activeSection === section ? "page" : undefined}
+                  onClick={onSelect}
+                >
+                  {icon}
+                  <span>{label}</span>
+                  <span
+                    className={`studio-nav__step ${done ? "is-done" : ""}`}
+                    aria-hidden="true"
+                  >
+                    {done ? <CheckIcon size={14} /> : step}
+                  </span>
+                </button>
+              ),
+            )}
           </nav>
 
           <div className="studio-sidebar__footer">
