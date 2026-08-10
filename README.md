@@ -6,7 +6,7 @@
 
 **Practice for the interview you actually want.**
 
-Rocky turns your résumé and a real job description into a live interview,
+Rocky turns your resume and a real job description into a live interview,
 then tells you what your answers actually proved.
 
 [Live demo](https://app-2c7f-8000.prg1.zerops.app) ·
@@ -47,10 +47,10 @@ their first or next job don't have.
 
 ## How Rocky solves it
 
-You give Rocky two things you already have: your résumé and the job description
+You give Rocky two things you already have: your resume and the job description
 you're applying to. From there it does what a good interviewer does.
 
-**It reads your résumé into evidence.** Every claim it extracts stays linked to
+**It reads your resume into evidence.** Every claim it extracts stays linked to
 the exact line in your document it came from. You can correct anything before
 the interview starts. Nothing gets invented on your behalf.
 
@@ -99,9 +99,9 @@ paragraph it came from. Edit anything that's wrong. The original file is
 discarded as soon as the text is extracted; only the extracted text and your
 corrections are kept.
 
-![Résumé evidence review](docs/screenshots/resume-evidence.png)
+![Resume evidence review](docs/screenshots/resume-evidence.png)
 
-No résumé handy? There are two built-in samples, and they go through exactly the
+No resume handy? There are two built-in samples, and they go through exactly the
 same upload path a real file does.
 
 ### 2 · Job description becomes a scorecard
@@ -136,6 +136,9 @@ live text.
 If the connection drops, you reconnect and carry on. A submitted answer never
 gets duplicated.
 
+If you turned on on-camera coaching, the camera comes up here too —
+[what it watches](#what-rocky-watches-on-camera) is spelled out below.
+
 ### 5 · The report
 
 The report at the top of this page, in full: a weighted score, coverage (how
@@ -145,8 +148,9 @@ practice plan with success criteria, and an explicit list of what remains
 uncertain.
 
 If you opted into delivery coaching, speaking pace, filler density and answer
-length appear in their own section — clearly marked as never affecting your
-role-fit score.
+length appear in their own section, joined by the five on-camera measures if the
+camera was on. All of it sits apart from the evidence score and is clearly
+marked as never affecting it.
 
 The whole thing downloads as a single self-contained HTML file you can keep.
 
@@ -169,9 +173,45 @@ placement teams who coach them.
 It is a coaching tool, not a hiring tool. Rocky never makes a hiring decision
 and never pretends to.
 
+## What Rocky watches on camera
+
+This part only runs if you ticked **on-camera coaching** back in preflight, and
+it's the piece the demo video skips over, so here it is in full.
+
+A self-view appears next to the transcript, and a MediaPipe face-landmark model
+runs as WebAssembly **on your own device**. No frame is uploaded, recorded or
+stored anywhere. The only thing that ever leaves the browser is the five
+aggregate numbers below, once, when the session ends.
+
+While you're answering, two things happen live:
+
+- you can see exactly what the camera sees, so you can fix your framing yourself
+- if your face leaves the shot for more than 1.5 seconds, an on-screen nudge
+  says so: *"Your face is not visible. Move back into frame."* Shorter dropouts
+  are treated as tracking noise, not as you walking away.
+
+Across the whole session it keeps five measures:
+
+| Measure | What it actually counts |
+| --- | --- |
+| Face present | Share of sampled frames where a face was found at all |
+| Facing camera | Of those frames, the share within 22° of square-on |
+| Steadiness | 0–1, derived from how far your head drifts between samples |
+| Off-frame episodes | Number of runs lasting 1.5s or longer with no face |
+| Longest off-frame | The worst single gap, in milliseconds |
+
+That's the entire list. Head position, and how much of the time there was a head
+to find. Nothing about your expression, mood, confidence or honesty is inferred —
+those readings are contested even in the research, and none of this touches your
+role-fit score. It is framing feedback, the same note a friend sitting in the
+room would give you.
+
+If you refuse the camera or the model fails to load, the interview simply carries
+on without it.
+
 ## What Rocky deliberately does not do
 
-- **It does not keep your résumé.** The file's bytes are discarded straight
+- **It does not keep your resume.** The file's bytes are discarded straight
   after text extraction.
 - **It does not record you.** Answer audio is streamed through the API to the
   transcription provider from memory and never touches disk on either side. No
@@ -195,7 +235,7 @@ and never pretends to.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/product-flow-dark.svg" />
-    <img src="docs/diagrams/product-flow-light.svg" alt="Résumé becomes an evidence profile and the job description becomes a scorecard; both feed the live interview, which produces a transcript, which the scorecard turns into an evidence report you can download as standalone HTML" />
+    <img src="docs/diagrams/product-flow-light.svg" alt="Resume becomes an evidence profile and the job description becomes a scorecard; both feed the live interview, which produces a transcript, which the scorecard turns into an evidence report you can download as standalone HTML" />
   </picture>
 </p>
 
@@ -237,7 +277,7 @@ server/
   api/services/    uploads, profile, scorecards, realtime, transcription,
                    evaluation, delivery, privacy, retention, worked example
   domain/          pure rules: intake, interview, evaluation, delivery
-  prompts/         versioned prompts for résumé, scorecard, interview, evaluation
+  prompts/         versioned prompts for resume, scorecard, interview, evaluation
   migrations/      Alembic revisions
   tests/           pytest suite
 web/
@@ -279,7 +319,7 @@ npm --prefix web run dev
 ```
 
 Open `http://localhost:5173`, create a practice session, load one of the sample
-résumés, and walk the flow. Without Azure credentials the résumé extraction
+resumes, and walk the flow. Without Azure credentials the resume extraction
 falls back to deterministic rules (`PROFILE_EXTRACTION_MODE=rules`) and the
 interview itself won't connect — everything up to preflight still works.
 
@@ -309,7 +349,7 @@ names**. They only look the same when the deployment was created with its
 model's name. A wrong value fails at request time with
 `transcription_deployment_missing`, not at startup.
 
-Résumé intake limits are configurable and default to 5 MB, 10 PDF pages, 200,000
+Resume intake limits are configurable and default to 5 MB, 10 PDF pages, 200,000
 extracted characters and an 8-second extraction timeout. The server validates
 extension, MIME type and file signature, and rejects encrypted, corrupt,
 scanned-only, oversized and macro-enabled files.
