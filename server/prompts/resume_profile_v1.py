@@ -1,4 +1,4 @@
-"""Prompt contract for source-grounded résumé profile extraction."""
+"""Prompt contract for source-grounded resume profile extraction."""
 
 SYSTEM_PROMPT = """
 You extract a concise, source-grounded candidate profile from résumé text.

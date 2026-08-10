@@ -42,6 +42,14 @@ _CLERK_IMAGE_ORIGIN = "https://img.clerk.com"
 # Clerk's bot protection renders a Cloudflare Turnstile widget in an iframe.
 _CLERK_TURNSTILE_ORIGIN = "https://challenges.cloudflare.com"
 
+# The landing page's demo section embeds the product walkthrough. The player is
+# the no-cookie host, which sets no tracking cookie until the visitor actually
+# presses play, and the poster frame comes from YouTube's thumbnail CDN. Both
+# are needed: without the frame origin the player renders as a blocked box, and
+# without the image origin the poster silently falls back to an illustration.
+_YOUTUBE_EMBED_ORIGIN = "https://www.youtube-nocookie.com"
+_YOUTUBE_THUMBNAIL_ORIGIN = "https://i.ytimg.com"
+
 
 def content_security_policy(settings: Settings) -> str:
     # Face tracking runs as WebAssembly in the browser, which needs
@@ -51,8 +59,8 @@ def content_security_policy(settings: Settings) -> str:
     script_src = ["'self'", "'wasm-unsafe-eval'"]
     style_src = ["'self'"]
     connect_src = ["'self'", "https://*.services.ai.azure.com"]
-    img_src = ["'self'", "data:"]
-    frame_src = ["'none'"]
+    img_src = ["'self'", "data:", _YOUTUBE_THUMBNAIL_ORIGIN]
+    frame_src = [_YOUTUBE_EMBED_ORIGIN]
 
     # Keyed on the publishable key rather than auth_mode: the browser loads
     # Clerk whenever the client was built with a key, and if the policy
@@ -65,7 +73,9 @@ def content_security_policy(settings: Settings) -> str:
         script_src.extend([*clerk_origins, _CLERK_TURNSTILE_ORIGIN])
         connect_src.extend(clerk_origins)
         img_src.append(_CLERK_IMAGE_ORIGIN)
-        frame_src = [_CLERK_TURNSTILE_ORIGIN]
+        # Append rather than replace: assigning here is what silently dropped
+        # the demo player's origin in production, where Clerk is always on.
+        frame_src.append(_CLERK_TURNSTILE_ORIGIN)
         # Clerk's components style themselves by injecting inline <style> rules,
         # so they render unstyled under `style-src 'self'`. The alternative is a
         # per-request nonce, which needs index.html templated on every request;

@@ -155,7 +155,7 @@ async def _extract_candidate_profile_llm(
     parsed = response.output_parsed
     if parsed is None:
         raise ProfileExtractionError(
-            "The AI could not produce a structured résumé profile. Try again."
+            "The AI could not produce a structured resume profile. Try again."
         )
     return _validate_llm_profile(
         parsed,
