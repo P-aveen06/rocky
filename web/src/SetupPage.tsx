@@ -782,7 +782,7 @@ export function SetupPage({
               <header className="panel-heading">
                 <div>
                   <p className="section__eyebrow">Candidate evidence</p>
-                  <h2 id="profile-title">Résumé profile</h2>
+                  <h2 id="profile-title">Resume profile</h2>
                   <p>
                     Only source-backed evidence is used during the interview.
                   </p>

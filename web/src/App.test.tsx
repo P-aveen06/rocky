@@ -196,7 +196,7 @@ describe("session dashboard", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Résumé profile",
+        name: "Resume profile",
       }),
     ).toBeInTheDocument();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
@@ -236,7 +236,7 @@ describe("session dashboard", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Continue setup" }),
     );
-    await screen.findByRole("heading", { name: "Résumé profile" });
+    await screen.findByRole("heading", { name: "Resume profile" });
 
     await userEvent.click(
       screen.getByRole("button", { name: "Edit session name" }),
@@ -443,7 +443,7 @@ describe("session dashboard", () => {
 
     await userEvent.click(screen.getByRole("tab", { name: /Profile/ }));
     expect(
-      screen.getByRole("heading", { name: "Résumé profile" }),
+      screen.getByRole("heading", { name: "Resume profile" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Improve with AI" }),

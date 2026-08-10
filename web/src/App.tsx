@@ -315,31 +315,31 @@ export function App() {
     done: boolean;
     onSelect: () => void;
   }[] = [
-      {
-        section: "roles",
-        step: "01",
-        label: "Resume & roles",
-        icon: <BriefcaseIcon />,
-        done: furthestStage >= SETUP_DONE,
-        onSelect: openResumeAndRoles,
-      },
-      {
-        section: "sessions",
-        step: "02",
-        label: "Practice sessions",
-        icon: <FileIcon />,
-        done: furthestStage >= REHEARSAL_DONE,
-        onSelect: () => navigateTo("sessions", "practice-sessions"),
-      },
-      {
-        section: "progress",
-        step: "03",
-        label: "Progress & reports",
-        icon: <ChartIcon />,
-        done: furthestStage >= REPORT_DONE,
-        onSelect: () => navigateTo("progress", "progress-reports"),
-      },
-    ];
+    {
+      section: "roles",
+      step: "01",
+      label: "Résumé & roles",
+      icon: <BriefcaseIcon />,
+      done: furthestStage >= SETUP_DONE,
+      onSelect: openResumeAndRoles,
+    },
+    {
+      section: "sessions",
+      step: "02",
+      label: "Practice sessions",
+      icon: <FileIcon />,
+      done: furthestStage >= REHEARSAL_DONE,
+      onSelect: () => navigateTo("sessions", "practice-sessions"),
+    },
+    {
+      section: "progress",
+      step: "03",
+      label: "Progress & reports",
+      icon: <ChartIcon />,
+      done: furthestStage >= REPORT_DONE,
+      onSelect: () => navigateTo("progress", "progress-reports"),
+    },
+  ];
 
   if (!loading && error?.status === 401) {
     return (
