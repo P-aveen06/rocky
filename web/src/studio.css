@@ -491,11 +491,7 @@ textarea {
   gap: var(--space-3);
   overflow: hidden;
   padding: var(--space-4);
-  border-color: color-mix(
-    in srgb,
-    var(--stat-tone) 16%,
-    var(--color-border)
-  );
+  border-color: color-mix(in srgb, var(--stat-tone) 16%, var(--color-border));
   background:
     radial-gradient(
       circle at 92% 8%,
@@ -611,11 +607,7 @@ textarea {
 
 @media (hover: hover) and (pointer: fine) {
   .stat-card:hover {
-    border-color: color-mix(
-      in srgb,
-      var(--stat-tone) 32%,
-      var(--color-border)
-    );
+    border-color: color-mix(in srgb, var(--stat-tone) 32%, var(--color-border));
     box-shadow: var(--shadow-lg);
     transform: translateY(calc(var(--space-1) * -1));
   }
@@ -859,20 +851,15 @@ textarea {
   gap: var(--space-4);
 }
 
-.setup-tabs {
+.setup-stepper__rail {
   border: var(--border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
 }
 
-.setup-tab {
+.setup-step {
   border-radius: var(--radius-md);
-}
-
-.setup-tab.is-active {
-  color: var(--color-accent);
-  background: var(--color-accent-soft);
 }
 
 .setup-panel,
@@ -1599,5 +1586,163 @@ textarea {
 
   .onboarding-dialog__copy h2 {
     font-size: var(--text-xl);
+  }
+}
+
+/* Waiting state for the model-backed setup steps: phase checklist for progress,
+   rotating interview tip so the wait is spent on something useful. */
+.processing-overlay {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(15 23 42 / 48%);
+  backdrop-filter: blur(3px);
+}
+
+.processing-card {
+  display: flex;
+  width: min(100%, calc(var(--space-9) * 5));
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.processing-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.processing-card__header h2 {
+  margin-bottom: var(--space-1);
+  font-size: var(--text-lg);
+  letter-spacing: -0.02em;
+}
+
+.processing-card__header p {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.processing-spinner {
+  display: block;
+  width: var(--space-6);
+  height: var(--space-6);
+  flex: 0 0 auto;
+  margin-top: var(--space-1);
+  border: 2px solid var(--color-accent-soft);
+  border-top-color: var(--color-accent);
+  border-radius: var(--radius-pill);
+  animation: processing-spin 900ms linear infinite;
+}
+
+@keyframes processing-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.processing-phases {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+}
+
+.processing-phase {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+  transition: color var(--motion-base);
+}
+
+.processing-phase.is-active {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.processing-phase.is-done {
+  color: var(--color-text-muted);
+}
+
+.processing-phase__marker {
+  display: inline-flex;
+  width: var(--space-4);
+  height: var(--space-4);
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--color-success);
+}
+
+.processing-phase.is-done .processing-phase__marker {
+  border-color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+.processing-phase.is-active .processing-phase__marker {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  animation: processing-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes processing-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--color-accent-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 var(--space-2) transparent;
+  }
+}
+
+.processing-tip {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-sunken);
+}
+
+.processing-tip__eyebrow {
+  margin-bottom: var(--space-2);
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.processing-tip__title {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  animation: processing-tip-in var(--motion-base);
+}
+
+.processing-tip__body {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+@keyframes processing-tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

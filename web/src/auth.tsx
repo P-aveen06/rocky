@@ -104,7 +104,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
       telemetry={{ disabled: true }}
     >
       <SignedOut>
-        <main className={`auth-page ${choosingGuest ? "auth-page--guest" : ""}`}>
+        <main
+          className={`auth-page ${choosingGuest ? "auth-page--guest" : ""}`}
+        >
           {choosingGuest ? (
             <GuestSignIn
               onStarted={setGuest}

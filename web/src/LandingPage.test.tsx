@@ -26,6 +26,24 @@ describe("Rocky landing page", () => {
     ).toHaveAttribute("href", "#demo-video");
   });
 
+  it("loads the demo video only after the viewer asks for it", async () => {
+    render(<LandingPage onOpenWorkspace={vi.fn()} />);
+
+    expect(document.querySelector("iframe")).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Watch on YouTube ↗" }),
+    ).toHaveAttribute("href", "https://youtu.be/3f3UjxkfLP0");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Play the Rocky product demo" }),
+    );
+
+    expect(screen.getByTitle("Rocky product demo")).toHaveAttribute(
+      "src",
+      expect.stringContaining("/embed/3f3UjxkfLP0"),
+    );
+  });
+
   it("opens the Rocky workspace from the primary call to action", async () => {
     const onOpenWorkspace = vi.fn();
     render(<LandingPage onOpenWorkspace={onOpenWorkspace} />);

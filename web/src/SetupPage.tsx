@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FocusEvent,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type FocusEvent } from "react";
 
 import { api, ApiError } from "./api";
 import paperworkIllustration from "./assets/blush/paperwork.png";
@@ -17,6 +11,7 @@ import {
   FileIcon,
   UploadIcon,
 } from "./icons";
+import { ProcessingOverlay } from "./ProcessingOverlay";
 import { statusPill, statusPillClass } from "./status";
 import type {
   CandidateProfile,
@@ -199,6 +194,48 @@ export function SetupPage({
   );
   const editedClaimCount =
     profileDraft?.claims.filter((claim) => claim.edited).length ?? 0;
+  // Claim and headline edits live in the draft until saved, so the profile step
+  // needs to know whether moving on would drop them.
+  const profileDirty =
+    profileDraft !== null &&
+    JSON.stringify(profileDraft) !== JSON.stringify(setup.profile);
+
+  /**
+   * Move between steps.
+   *
+   * Notices belong to the step that produced them — "Resume extracted" hanging
+   * over the scorecard is noise — so changing step clears the banners.
+   */
+  // One list drives both the alert and the disabled state, so a blocked button
+  // always has a stated reason above it.
+  const scorecardBlockers: string[] = [];
+  if (scorecardDraft && totalWeight !== 100) {
+    scorecardBlockers.push(
+      `Adjust weights by ${Math.abs(100 - totalWeight)} percentage points to reach 100%.`,
+    );
+  }
+  if (scorecardDraft && !scorecardComplete) {
+    scorecardBlockers.push(
+      "Every competency needs a name, description, seniority expectation, evidence item, and question family.",
+    );
+  }
+  const roleReady =
+    profileDraft !== null &&
+    roleTitle.trim().length >= 2 &&
+    jobDescription.trim().length >= 50;
+  const roleHint = scorecardDraft
+    ? "Built from the role requirements and selected seniority."
+    : roleTitle.trim().length < 2
+      ? "Add a role title to generate the scorecard."
+      : jobDescription.trim().length < 50
+        ? `Paste at least ${50 - jobDescription.trim().length} more characters of the job description.`
+        : "Built from the role requirements and selected seniority.";
+
+  function goToStep(step: SetupTab) {
+    setActiveTab(step);
+    setNotice(null);
+    setError(null);
+  }
 
   function beginTitleEdit() {
     setTitleDraft(interview.title);
@@ -342,15 +379,26 @@ export function SetupPage({
     }
   }
 
-  async function saveProfile() {
+  /**
+   * Save any claim edits and move to the target role.
+   *
+   * The two used to be separate buttons in separate corners, which made it
+   * possible to leave the step with unsaved edits. Continuing now carries the
+   * save, so there is one forward action per step.
+   */
+  async function saveProfileAndContinue() {
     if (!profileDraft) return;
+    if (!profileDirty) {
+      goToStep("role");
+      return;
+    }
     setWorking("profile");
     setError(null);
     try {
       const profile = await api.updateProfile(profileDraft);
       setSetup((current) => ({ ...current, profile }));
       setProfileDraft(profile);
-      setNotice("Candidate profile saved.");
+      goToStep("role");
     } catch (caught) {
       setError(
         caught instanceof ApiError
@@ -498,9 +546,8 @@ export function SetupPage({
     );
   }
 
-  const tabs: Array<{
+  const steps: Array<{
     id: SetupTab;
-    index: string;
     label: string;
     meta: string;
     disabled: boolean;
@@ -508,7 +555,6 @@ export function SetupPage({
   }> = [
     {
       id: "profile",
-      index: "01",
       label: "Profile",
       meta: profileDraft
         ? `${profileDraft.claims.length} evidence items`
@@ -518,23 +564,59 @@ export function SetupPage({
     },
     {
       id: "role",
-      index: "02",
       label: "Target role",
-      meta: setup.job_target?.title ?? "Add job",
+      meta: setup.job_target?.title ?? "Add job description",
       disabled: !profileDraft,
       complete: setup.job_target !== null,
     },
     {
       id: "scorecard",
-      index: "03",
       label: "Scorecard",
       meta: scorecardDraft
         ? `${scorecardDraft.competencies.length} competencies`
-        : "Generate",
+        : "Generated from the role",
       disabled: !scorecardDraft,
       complete: scorecardDraft !== null,
     },
   ];
+  const activeStepIndex = steps.findIndex((step) => step.id === activeTab);
+  const activeStep = steps[activeStepIndex];
+  // Only the model-backed steps get the full waiting treatment; saves return
+  // fast enough that a button label carries them.
+  const overlay =
+    working === "resume"
+      ? {
+          title: "Reading your résumé",
+          lede: "Pulling out source-backed claims you can review and edit.",
+          phases: [
+            "Uploading the file",
+            "Extracting text from the document",
+            "Grouping evidence into claims",
+            "Linking each claim to its source",
+          ],
+        }
+      : working === "improve"
+        ? {
+            title: "Re-extracting with AI",
+            lede: "Condensing the same résumé into sharper, still source-linked evidence.",
+            phases: [
+              "Re-reading the stored résumé text",
+              "Condensing overlapping claims",
+              "Checking every claim against its source",
+            ],
+          }
+        : working === "scorecard"
+          ? {
+              title: "Building your scorecard",
+              lede: "Turning the job description into weighted competencies you can tune.",
+              phases: [
+                "Saving the target role",
+                "Reading the job description",
+                "Drafting competencies and weights",
+                "Adding evidence and question families",
+              ],
+            }
+          : null;
 
   return (
     <main className="canvas setup-canvas" id="session-setup">
@@ -639,26 +721,55 @@ export function SetupPage({
 
       {!loading ? (
         <div className="setup-workspace">
-          <div className="setup-tabs" role="tablist" aria-label="Session setup">
-            {tabs.map((tab) => (
-              <button
-                className={`setup-tab ${activeTab === tab.id ? "is-active" : ""}`}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                aria-controls={`${tab.id}-panel`}
-                disabled={tab.disabled}
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <span className="setup-tab__index">{tab.index}</span>
-                <span className="setup-tab__copy">
-                  <strong>{tab.label}</strong>
-                  <small>{tab.meta}</small>
-                </span>
-                {tab.complete ? <CheckIcon size={16} /> : null}
-              </button>
-            ))}
+          <div className="setup-stepper">
+            <p className="setup-stepper__progress">
+              Step {activeStepIndex + 1} of {steps.length}
+              <span> · {activeStep?.label}</span>
+            </p>
+            <div
+              className="setup-stepper__rail"
+              role="tablist"
+              aria-label="Session setup"
+            >
+              {steps.map((step, index) => {
+                const isActive = activeTab === step.id;
+                const state = isActive
+                  ? "is-active"
+                  : step.complete
+                    ? "is-complete"
+                    : step.disabled
+                      ? "is-locked"
+                      : "is-upcoming";
+                return (
+                  <button
+                    className={`setup-step ${state}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-controls={`${step.id}-panel`}
+                    disabled={step.disabled}
+                    key={step.id}
+                    onClick={() => goToStep(step.id)}
+                  >
+                    <span className="setup-step__marker" aria-hidden="true">
+                      {step.complete && !isActive ? (
+                        <CheckIcon size={14} />
+                      ) : (
+                        index + 1
+                      )}
+                    </span>
+                    <span className="setup-step__copy">
+                      <strong>{step.label}</strong>
+                      <small>
+                        {step.disabled
+                          ? "Locked until the step before"
+                          : step.meta}
+                      </small>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {activeTab === "profile" ? (
@@ -676,30 +787,10 @@ export function SetupPage({
                     Only source-backed evidence is used during the interview.
                   </p>
                 </div>
-                {profileDraft ? (
-                  <div className="panel-heading__actions">
-                    {profileDraft.extractor_version === "local-rules-v1" &&
-                    setup.upload ? (
-                      <button
-                        className="btn btn--sm"
-                        type="button"
-                        disabled={working !== null}
-                        onClick={improveProfile}
-                      >
-                        {working === "improve"
-                          ? "Improving…"
-                          : "Improve with AI"}
-                      </button>
-                    ) : null}
-                    <button
-                      className="btn btn--primary btn--sm"
-                      type="button"
-                      disabled={working !== null}
-                      onClick={saveProfile}
-                    >
-                      {working === "profile" ? "Saving…" : "Save profile"}
-                    </button>
-                  </div>
+                {profileDirty ? (
+                  <span className="panel-status panel-status--pending">
+                    Unsaved edits
+                  </span>
                 ) : null}
               </header>
 
@@ -744,14 +835,6 @@ export function SetupPage({
                       }
                     />
                   </label>
-                  <button
-                    className="btn btn--primary"
-                    type="button"
-                    disabled={!resume || working !== null}
-                    onClick={extractResume}
-                  >
-                    {working === "resume" ? "Extracting…" : "Extract profile"}
-                  </button>
                 </div>
               )}
               {!setup.profile ? (
@@ -914,6 +997,56 @@ export function SetupPage({
                   </p>
                 </div>
               )}
+
+              <footer className="panel-actions">
+                <div className="panel-actions__buttons">
+                  {profileDraft ? (
+                    <>
+                      {profileDraft.extractor_version === "local-rules-v1" &&
+                      setup.upload ? (
+                        <button
+                          className="btn"
+                          type="button"
+                          disabled={working !== null}
+                          onClick={improveProfile}
+                        >
+                          {working === "improve"
+                            ? "Improving…"
+                            : "Improve with AI"}
+                        </button>
+                      ) : null}
+                      <button
+                        className="btn btn--primary"
+                        type="button"
+                        disabled={working !== null}
+                        onClick={saveProfileAndContinue}
+                      >
+                        {working === "profile"
+                          ? "Saving…"
+                          : profileDirty
+                            ? "Save and continue"
+                            : "Continue to target role"}
+                        <span aria-hidden="true">→</span>
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className="btn btn--primary"
+                      type="button"
+                      disabled={!resume || working !== null}
+                      onClick={extractResume}
+                    >
+                      {working === "resume" ? "Extracting…" : "Extract profile"}
+                      <span aria-hidden="true">→</span>
+                    </button>
+                  )}
+                </div>
+                <span>
+                  {profileDraft
+                    ? "Claim edits are saved before the next step opens."
+                    : "Choose a résumé above, or load a sample below."}
+                </span>
+              </footer>
             </section>
           ) : null}
 
@@ -982,37 +1115,51 @@ export function SetupPage({
                       : "Minimum 50 characters. Document instructions are treated as untrusted text."}
                   </span>
                 </label>
+                {scorecardDraft ? (
+                  <p className="field__hint role-form__locked">
+                    The role is fixed once its scorecard exists, so the
+                    interview keeps scoring against what it was built from. To
+                    practise a different role, start a new practice session.
+                  </p>
+                ) : null}
               </div>
 
               <footer className="panel-actions">
-                {!scorecardDraft ? (
+                <div className="panel-actions__buttons">
                   <button
-                    className="btn btn--primary"
+                    className="btn btn--ghost"
                     type="button"
-                    disabled={
-                      !profileDraft ||
-                      roleTitle.trim().length < 2 ||
-                      jobDescription.trim().length < 50 ||
-                      working !== null
-                    }
-                    onClick={buildScorecard}
+                    disabled={working !== null}
+                    onClick={() => goToStep("profile")}
                   >
-                    {working === "scorecard"
-                      ? "Building scorecard…"
-                      : "Generate scorecard"}
+                    Back to profile
                   </button>
-                ) : (
-                  <button
-                    className="btn btn--primary"
-                    type="button"
-                    onClick={() => setActiveTab("scorecard")}
-                  >
-                    Review scorecard
-                  </button>
-                )}
-                <span>
-                  Built from the role requirements and selected seniority.
-                </span>
+                  {!scorecardDraft ? (
+                    <button
+                      className="btn btn--primary"
+                      type="button"
+                      disabled={!roleReady || working !== null}
+                      onClick={buildScorecard}
+                    >
+                      {working === "scorecard"
+                        ? "Building scorecard…"
+                        : "Generate scorecard"}
+                      <span aria-hidden="true">→</span>
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn--primary"
+                      type="button"
+                      onClick={() => goToStep("scorecard")}
+                    >
+                      Review scorecard
+                      <span aria-hidden="true">→</span>
+                    </button>
+                  )}
+                </div>
+                {/* A disabled primary with no reason next to it is the thing
+                    people get stuck on, so the hint says what is missing. */}
+                <span>{roleHint}</span>
               </footer>
             </section>
           ) : null}
@@ -1214,45 +1361,44 @@ export function SetupPage({
                 })}
               </div>
 
-              {totalWeight !== 100 ? (
-                <p className="weight-error" role="alert">
-                  Adjust weights by {Math.abs(100 - totalWeight)} percentage
-                  points to reach 100%.
-                </p>
-              ) : null}
-              {!scorecardComplete ? (
-                <p className="weight-error" role="alert">
-                  Every competency needs a name, description, seniority
-                  expectation, evidence item, and question family.
-                </p>
+              {scorecardBlockers.length > 0 ? (
+                <div className="weight-error" role="alert">
+                  <strong>Before you can start:</strong>
+                  <ul>
+                    {scorecardBlockers.map((blocker) => (
+                      <li key={blocker}>{blocker}</li>
+                    ))}
+                  </ul>
+                </div>
               ) : null}
               <footer className="panel-actions">
                 <div className="panel-actions__buttons">
                   <button
+                    className="btn btn--ghost"
+                    type="button"
+                    disabled={working !== null}
+                    onClick={() => goToStep("role")}
+                  >
+                    Back to target role
+                  </button>
+                  <button
                     className="btn"
                     type="button"
-                    disabled={
-                      totalWeight !== 100 ||
-                      !scorecardComplete ||
-                      working !== null
-                    }
+                    disabled={scorecardBlockers.length > 0 || working !== null}
                     onClick={saveScorecard}
                   >
-                    {working === "save" ? "Saving…" : "Save scorecard"}
+                    {working === "save" ? "Saving…" : "Save draft"}
                   </button>
                   <button
                     className="btn btn--primary"
                     type="button"
-                    disabled={
-                      totalWeight !== 100 ||
-                      !scorecardComplete ||
-                      working !== null
-                    }
+                    disabled={scorecardBlockers.length > 0 || working !== null}
                     onClick={continueToPreflight}
                   >
                     {working === "start"
                       ? "Preparing…"
-                      : "Continue to preflight"}
+                      : "Save and start preflight"}
+                    <span aria-hidden="true">→</span>
                   </button>
                 </div>
                 <span>
@@ -1262,6 +1408,14 @@ export function SetupPage({
             </section>
           ) : null}
         </div>
+      ) : null}
+
+      {overlay ? (
+        <ProcessingOverlay
+          title={overlay.title}
+          lede={overlay.lede}
+          phases={overlay.phases}
+        />
       ) : null}
     </main>
   );

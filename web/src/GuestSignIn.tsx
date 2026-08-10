@@ -124,11 +124,7 @@ export function GuestSignIn({ onStarted, onCancel }: GuestSignInProps) {
             Your email is used to reconnect this guest workspace.
           </p>
           {onCancel ? (
-            <button
-              className="btn btn--ghost"
-              type="button"
-              onClick={onCancel}
-            >
+            <button className="btn btn--ghost" type="button" onClick={onCancel}>
               Sign in instead
             </button>
           ) : null}

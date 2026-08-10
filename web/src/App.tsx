@@ -388,9 +388,7 @@ export function App() {
                 type="button"
                 aria-label={`Switch to ${theme === "light" ? "dark" : "light"} theme`}
                 title={`Use ${theme === "light" ? "dark" : "light"} theme`}
-                onClick={() =>
-                  setTheme(theme === "light" ? "dark" : "light")
-                }
+                onClick={() => setTheme(theme === "light" ? "dark" : "light")}
               >
                 {theme === "light" ? <MoonIcon /> : <SunIcon />}
               </button>
@@ -568,12 +566,13 @@ export function App() {
                   <h2 id="sessions-title">Practice sessions</h2>
                 </div>
                 <button
-                  className="btn btn--sm"
+                  className="btn btn--primary btn--sm"
                   type="button"
                   disabled={creating || loading}
                   onClick={() => void createSession()}
                 >
-                  <PlusIcon size={16} /> New session
+                  <PlusIcon size={16} />
+                  {creating ? "Creating…" : "New session"}
                 </button>
               </div>
 
@@ -680,9 +679,10 @@ export function App() {
               <p className="section__eyebrow">Settings &amp; privacy</p>
               <h2 id="privacy-title">A calm space for private rehearsal.</h2>
               <p>
-                Theme controls stay available in the sidebar. Camera and microphone
-                permissions are requested only when a practice session needs
-                them, and your session data remains inside your workspace.
+                Theme controls stay available in the sidebar. Camera and
+                microphone permissions are requested only when a practice
+                session needs them, and your session data remains inside your
+                workspace.
               </p>
             </div>
             <button

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import analyticsIllustration from "./assets/blush/analytics.png";
 import businessPlanningIllustration from "./assets/blush/business-planning.png";
@@ -19,6 +19,7 @@ interface WorkflowStepProps {
   title: string;
   body: string;
   illustration: string;
+  delay?: number;
 }
 
 interface AudienceCardProps {
@@ -26,15 +27,28 @@ interface AudienceCardProps {
   title: string;
   body: string;
   note: string;
+  delay?: number;
 }
 
 interface PrincipleProps {
   icon: ReactNode;
   title: string;
   body: string;
+  delay?: number;
 }
 
-const demoVideoUrl: string | null = null;
+const demoVideoId = "3f3UjxkfLP0";
+const demoVideoUrl = `https://youtu.be/${demoVideoId}`;
+const demoVideoThumbnail = `https://i.ytimg.com/vi/${demoVideoId}/maxresdefault.jpg`;
+const demoVideoEmbedUrl = `https://www.youtube-nocookie.com/embed/${demoVideoId}?autoplay=1&rel=0&modestbranding=1`;
+
+const proofPoints = [
+  "Résumé-aware",
+  "Role-specific",
+  "Realtime practice",
+  "Private by design",
+  "Actionable reports",
+];
 
 const journey = [
   {
@@ -74,6 +88,73 @@ const journey = [
   },
 ];
 
+/**
+ * Reveals every `[data-reveal]` descendant as it scrolls into view, and keeps a
+ * `--scroll-progress` custom property in sync for the reading-progress bar.
+ * Falls back to showing everything when the browser (or jsdom) lacks support.
+ */
+function useLandingMotion(rootRef: React.RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const targets = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-reveal]"),
+    );
+    const prefersReducedMotion =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (prefersReducedMotion || typeof IntersectionObserver === "undefined") {
+      targets.forEach((target) => target.classList.add("is-revealed"));
+      return;
+    }
+
+    // Only hide the reveal targets once we know we can bring them back.
+    root.classList.add("is-motion-ready");
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-revealed");
+          observer.unobserve(entry.target);
+        });
+      },
+      { rootMargin: "0px 0px -10% 0px", threshold: 0 },
+    );
+
+    targets.forEach((target) => observer.observe(target));
+
+    let frame = 0;
+    const updateProgress = () => {
+      frame = 0;
+      const scrollable = root.scrollHeight - window.innerHeight;
+      const progress = scrollable > 0 ? window.scrollY / scrollable : 0;
+      root.style.setProperty(
+        "--scroll-progress",
+        String(Math.min(1, Math.max(0, progress))),
+      );
+    };
+    const onScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(updateProgress);
+    };
+
+    updateProgress();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+
+    return () => {
+      observer.disconnect();
+      root.classList.remove("is-motion-ready");
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [rootRef]);
+}
+
 function Brand() {
   return (
     <span className="landing-brand">
@@ -89,23 +170,56 @@ function Brand() {
 }
 
 function DemoLink({ className = "" }: { className?: string }) {
-  const sharedClassName = `btn landing-demo-link ${className}`.trim();
-  if (demoVideoUrl) {
-    return (
-      <a
-        className={sharedClassName}
-        href={demoVideoUrl}
-        target="_blank"
-        rel="noreferrer"
-      >
-        <PlayIcon size={18} /> Watch demo
-      </a>
-    );
-  }
   return (
-    <a className={sharedClassName} href="#demo-video">
+    <a
+      className={`btn landing-demo-link ${className}`.trim()}
+      href="#demo-video"
+    >
       <PlayIcon size={18} /> Watch demo
     </a>
+  );
+}
+
+function DemoVideo() {
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  if (isPlaying) {
+    return (
+      <div className="landing-video landing-video--playing">
+        <iframe
+          src={demoVideoEmbedUrl}
+          title="Rocky product demo"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="landing-video">
+      <button
+        className="landing-video__facade"
+        type="button"
+        onClick={() => setIsPlaying(true)}
+        aria-label="Play the Rocky product demo"
+      >
+        <img
+          src={demoVideoThumbnail}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          onError={(event) => {
+            event.currentTarget.src = videoCallIllustration;
+            event.currentTarget.classList.add("is-fallback");
+          }}
+        />
+        <span className="landing-video__play" aria-hidden="true">
+          <PlayIcon size={24} />
+        </span>
+        <small>Rocky product demo · 1 walkthrough</small>
+      </button>
+    </div>
   );
 }
 
@@ -114,9 +228,14 @@ function WorkflowStep({
   title,
   body,
   illustration,
+  delay = 0,
 }: WorkflowStepProps) {
   return (
-    <article className="landing-workflow-card">
+    <article
+      className="landing-workflow-card"
+      data-reveal
+      style={{ "--reveal-delay": `${delay}ms` } as React.CSSProperties}
+    >
       <div className="landing-workflow-card__header">
         <span>{number}</span>
         <img src={illustration} alt="" aria-hidden="true" />
@@ -127,9 +246,19 @@ function WorkflowStep({
   );
 }
 
-function AudienceCard({ index, title, body, note }: AudienceCardProps) {
+function AudienceCard({
+  index,
+  title,
+  body,
+  note,
+  delay = 0,
+}: AudienceCardProps) {
   return (
-    <article className="landing-audience-card">
+    <article
+      className="landing-audience-card"
+      data-reveal
+      style={{ "--reveal-delay": `${delay}ms` } as React.CSSProperties}
+    >
       <span>{index}</span>
       <h3>{title}</h3>
       <p>{body}</p>
@@ -138,9 +267,13 @@ function AudienceCard({ index, title, body, note }: AudienceCardProps) {
   );
 }
 
-function Principle({ icon, title, body }: PrincipleProps) {
+function Principle({ icon, title, body, delay = 0 }: PrincipleProps) {
   return (
-    <article className="landing-principle">
+    <article
+      className="landing-principle"
+      data-reveal
+      style={{ "--reveal-delay": `${delay}ms` } as React.CSSProperties}
+    >
       <span aria-hidden="true">{icon}</span>
       <div>
         <h3>{title}</h3>
@@ -151,8 +284,15 @@ function Principle({ icon, title, body }: PrincipleProps) {
 }
 
 export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
+  const pageRef = useRef<HTMLDivElement>(null);
+  useLandingMotion(pageRef);
+
   return (
-    <div className="landing-page" id="top">
+    <div className="landing-page" id="top" ref={pageRef}>
+      <div className="landing-progress" aria-hidden="true">
+        <span />
+      </div>
+
       <header className="landing-topbar">
         <a href="#top" aria-label="Rocky home">
           <Brand />
@@ -160,12 +300,13 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
         <nav aria-label="Landing page">
           <a href="#how-it-works">How it works</a>
           <a href="#who-it-is-for">Who it’s for</a>
+          <a href="#demo-video">Demo</a>
           <a href="#journey">Journey</a>
         </nav>
         <div className="landing-topbar__actions">
           <DemoLink className="btn--ghost" />
           <button
-            className="btn btn--primary"
+            className="btn btn--primary landing-cta"
             type="button"
             onClick={onOpenWorkspace}
           >
@@ -179,11 +320,18 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
           className="landing-shell landing-hero"
           aria-labelledby="hero-title"
         >
+          <div className="landing-aurora" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+
           <div className="landing-hero__copy">
-            <p className="landing-eyebrow">
+            <p className="landing-eyebrow landing-eyebrow--live">
+              <i aria-hidden="true" />
               Role-aware · evidence-backed · built in a 20-hour hackathon
             </p>
-            <h1 id="hero-title">
+            <h1 id="hero-title" className="landing-hero__title">
               Practice for the interview you actually want.
             </h1>
             <p className="landing-hero__lede">
@@ -193,7 +341,7 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
             </p>
             <div className="landing-hero__actions">
               <button
-                className="btn btn--primary"
+                className="btn btn--primary landing-cta"
                 type="button"
                 onClick={onOpenWorkspace}
               >
@@ -239,12 +387,18 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
         </section>
 
         <section className="landing-proof" aria-label="Product principles">
-          <div className="landing-shell">
-            <span>Résumé-aware</span>
-            <span>Role-specific</span>
-            <span>Realtime practice</span>
-            <span>Private by design</span>
-            <span>Actionable reports</span>
+          <div className="landing-proof__track">
+            {[0, 1].map((copy) => (
+              <div
+                className="landing-proof__group"
+                key={copy}
+                aria-hidden={copy === 1 ? true : undefined}
+              >
+                {proofPoints.map((point) => (
+                  <span key={point}>{point}</span>
+                ))}
+              </div>
+            ))}
           </div>
         </section>
 
@@ -252,13 +406,13 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
           className="landing-shell landing-problem"
           aria-labelledby="problem-title"
         >
-          <div className="landing-section-intro">
+          <div className="landing-section-intro" data-reveal>
             <p className="landing-eyebrow">Why Rocky</p>
             <h2 id="problem-title">
               Generic questions create generic confidence.
             </h2>
           </div>
-          <div className="landing-problem__body">
+          <div className="landing-problem__body" data-reveal>
             <p>
               Interviews are not only about remembering an answer. They are
               about selecting the right story, showing your part clearly, and
@@ -275,7 +429,10 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
           id="how-it-works"
         >
           <div className="landing-shell">
-            <div className="landing-section-intro landing-section-intro--wide">
+            <div
+              className="landing-section-intro landing-section-intro--wide"
+              data-reveal
+            >
               <p className="landing-eyebrow">One connected practice loop</p>
               <h2>From your experience to your next sharper answer.</h2>
               <p>
@@ -289,24 +446,28 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
                 title="Bring your context"
                 body="Upload a résumé and add the job description. Rocky keeps source references attached to the claims it extracts."
                 illustration={paperworkIllustration}
+                delay={0}
               />
               <WorkflowStep
                 number="02"
                 title="Shape the scorecard"
                 body="Review the role-specific competencies, priorities, and evidence the interview should collect."
                 illustration={businessPlanningIllustration}
+                delay={90}
               />
               <WorkflowStep
                 number="03"
                 title="Practise live"
                 body="Answer by voice or text in a focused room with realistic follow-ups, recovery, and transcript visibility."
                 illustration={videoCallIllustration}
+                delay={180}
               />
               <WorkflowStep
                 number="04"
                 title="Reflect with evidence"
                 body="See strengths, gaps, transcript excerpts, uncertainty, and drills—then download the report as HTML."
                 illustration={analyticsIllustration}
+                delay={270}
               />
             </div>
           </div>
@@ -318,7 +479,7 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
           aria-labelledby="audience-title"
         >
           <div className="landing-audience__intro">
-            <div className="landing-section-intro">
+            <div className="landing-section-intro" data-reveal>
               <p className="landing-eyebrow">
                 Built for more than one career stage
               </p>
@@ -334,6 +495,8 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
             <img
               src={studyingIllustration}
               alt="A learner preparing thoughtfully at a desk"
+              className="landing-float"
+              data-reveal
             />
           </div>
           <div className="landing-audience-grid">
@@ -342,24 +505,28 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
               title="Students & freshers"
               body="Turn coursework, internships, projects, and placements into clear stories—even when professional experience is limited."
               note="First roles · campus placements · internships"
+              delay={0}
             />
             <AudienceCard
               index="02"
               title="Working professionals"
               body="Prepare for a specific company or promotion without relying on generic interview question lists."
               note="Job switches · promotions · leadership rounds"
+              delay={90}
             />
             <AudienceCard
               index="03"
               title="Career switchers & returners"
               body="Translate existing experience into the language of a new role and identify where the evidence still needs strengthening."
               note="Role changes · returning to work · new industries"
+              delay={180}
             />
             <AudienceCard
               index="04"
               title="Trainers & placement teams"
               body="Give freshers a repeatable practice structure and a report that supports focused, evidence-based coaching."
               note="Bootcamps · colleges · mentors · L&D teams"
+              delay={270}
             />
           </div>
         </section>
@@ -370,32 +537,27 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
           aria-labelledby="demo-title"
         >
           <div className="landing-shell landing-demo__grid">
-            <div>
+            <div data-reveal>
               <p className="landing-eyebrow">Product walkthrough</p>
               <h2 id="demo-title">See the complete practice loop.</h2>
               <p>
-                A short demo will be added here shortly—from résumé setup to the
-                live interview and downloadable evidence report.
+                Watch the full run—from résumé setup and scorecard review to the
+                live interview and the downloadable evidence report.
               </p>
-              <span className="landing-demo__status">
-                <ClockIcon size={16} /> Demo video coming soon
-              </span>
+              <a
+                className="landing-demo__status"
+                href={demoVideoUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <PlayIcon size={16} /> Watch on YouTube ↗
+              </a>
             </div>
             <div
-              className="landing-video-placeholder"
-              aria-label="Demo video placeholder"
+              data-reveal
+              style={{ "--reveal-delay": "120ms" } as React.CSSProperties}
             >
-              <img
-                src={videoCallIllustration}
-                alt="An illustrated video call interface"
-              />
-              <span
-                className="landing-video-placeholder__play"
-                aria-hidden="true"
-              >
-                <PlayIcon size={24} />
-              </span>
-              <small>Rocky product demo</small>
+              <DemoVideo />
             </div>
           </div>
         </section>
@@ -406,7 +568,7 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
           aria-labelledby="journey-title"
         >
           <div className="landing-journey__intro">
-            <div className="landing-section-intro">
+            <div className="landing-section-intro" data-reveal>
               <p className="landing-eyebrow">
                 Hackathon log · the first 20 hours
               </p>
@@ -417,7 +579,7 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
                 experience.
               </p>
             </div>
-            <div className="landing-journey__art">
+            <div className="landing-journey__art" data-reveal>
               <img
                 src={processIllustration}
                 alt="A builder turning an idea into a working process"
@@ -427,8 +589,14 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
           </div>
 
           <ol className="landing-timeline">
-            {journey.map((item) => (
-              <li key={item.time}>
+            {journey.map((item, index) => (
+              <li
+                key={item.time}
+                data-reveal
+                style={
+                  { "--reveal-delay": `${index * 60}ms` } as React.CSSProperties
+                }
+              >
                 <span>{item.time}</span>
                 <div>
                   <h3>{item.title}</h3>
@@ -444,7 +612,10 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
           aria-labelledby="principles-title"
         >
           <div className="landing-shell">
-            <div className="landing-section-intro landing-section-intro--wide">
+            <div
+              className="landing-section-intro landing-section-intro--wide"
+              data-reveal
+            >
               <p className="landing-eyebrow">The product promises</p>
               <h2 id="principles-title">
                 Supportive coaching, with clear boundaries.
@@ -455,16 +626,19 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
                 icon={<FileIcon size={20} />}
                 title="Evidence stays traceable"
                 body="Coaching claims point back to the résumé, job description, scorecard, or words used in the interview."
+                delay={0}
               />
               <Principle
                 icon={<CheckIcon size={20} />}
                 title="Speaking stays separate"
                 body="Optional delivery coaching never changes the evidence score and never claims to infer personality or honesty."
+                delay={90}
               />
               <Principle
                 icon={<ClockIcon size={20} />}
                 title="Practice remains recoverable"
                 body="Drafts, connection recovery, transcript finalisation, deletion, and privacy are designed as product states—not afterthoughts."
+                delay={180}
               />
             </div>
           </div>
@@ -473,6 +647,7 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
         <section
           className="landing-shell landing-final-cta"
           aria-labelledby="final-cta-title"
+          data-reveal
         >
           <div>
             <p className="landing-eyebrow">Your next answer can be sharper</p>
@@ -482,7 +657,7 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
             </h2>
             <div className="landing-hero__actions">
               <button
-                className="btn btn--primary"
+                className="btn btn--primary landing-cta"
                 type="button"
                 onClick={onOpenWorkspace}
               >
@@ -491,7 +666,11 @@ export function LandingPage({ onOpenWorkspace }: LandingPageProps) {
               <DemoLink />
             </div>
           </div>
-          <img src={checkIllustration} alt="A completed practice checklist" />
+          <img
+            src={checkIllustration}
+            alt="A completed practice checklist"
+            className="landing-float"
+          />
         </section>
       </main>
 

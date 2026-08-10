@@ -396,11 +396,9 @@ describe("session dashboard", () => {
     expect(screen.getByDisplayValue("Backend API design")).toBeInTheDocument();
     expect(screen.getByText("Job description line 1")).toBeInTheDocument();
     expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save draft" })).toBeEnabled();
     expect(
-      screen.getByRole("button", { name: "Save scorecard" }),
-    ).toBeEnabled();
-    expect(
-      screen.getByRole("button", { name: "Continue to preflight" }),
+      screen.getByRole("button", { name: /Save and start preflight/ }),
     ).toBeEnabled();
 
     await userEvent.click(screen.getByRole("tab", { name: /Profile/ }));
